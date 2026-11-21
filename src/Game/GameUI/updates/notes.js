@@ -55,7 +55,8 @@ import { RELEASES } from "./notesReleases.js";
 const NEW_UPDATES = [
   {
     // Sent orders: a click on the text opens an editor, the ✕ shows under a pointer that a deletion moved
-    // onto a row (CSS :hover, GameUI/actionItem.css), the list widens by its corner. The date widget writes
+    // onto a row (CSS :hover, GameUI/actionItem.css); the Actions and Events panels widen by their right edge and
+    // the Events panel grows by its top edge, sizes kept (panelSize.js, panelResizeGrip.jsx). The date widget writes
     // the date in the reader's order with the country above it; the Country panel's tabs have drawn icons;
     // the dock, search and war-room buttons share one height (hudDock.js DOCK_HEIGHT_REM); Exit Game has a
     // drawn house (the owner, 2026-11-21).
@@ -69,7 +70,7 @@ const NEW_UPDATES = [
         items: [
           "Click the text of a sent order to change it. You no longer need to delete it and write it again.",
           "The delete button appears as soon as the pointer is over an order, even after an order above it was removed.",
-          "The list of your orders can be widened by its corner.",
+          "The Actions and Events panels can be widened by their right edge, the Events panel made taller by its top edge, and both keep their size.",
           "The date at the top is shorter and written the way your language writes it, such as 13.01.1068, and your country's name sits above it instead of being cut.",
           "The Country panel's tabs have drawn icons, and their labels no longer run into each other.",
           "The buttons at the bottom of the screen and the search button are one height and line up along one edge.",

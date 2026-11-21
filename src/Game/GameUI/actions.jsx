@@ -28,6 +28,8 @@ import { queuedActionIds, selectSavedSuggestions, suggestionsFellBack } from "./
 import { ProjectsBoard, ProjectsTabIcon } from "./projects.jsx";
 import { DOCK_BUTTON_REM, DOCK_ICON_PX } from "./hudDock.js";
 import "./actionItem.css";
+import { PanelResizeGrip } from "./panelResizeGrip.jsx";
+import { ACTIONS_PANEL_WIDTH_KEY, clampPanelWidth, panelWidthCss, readStoredPx, writeStoredPx } from "./panelSize.js";
 import {
     PANEL_HEIGHT_VAR,
     actionsLayoutReducer,
@@ -194,6 +196,9 @@ const ActionItem = ({ action, onDelete, onEdit, locked = false }) => {
 
     const label = buildActionDisplayText(normalized);
     const showTitle = normalized.title && normalized.title !== label;
+    const handleTextKeyDown = (event) => {
+        if (event.key === "Enter") onEdit();
+    };
 
     return (
         <div
@@ -219,14 +224,13 @@ const ActionItem = ({ action, onDelete, onEdit, locked = false }) => {
             </div>
         )}
         {/* A click on the text opens the editor. A locked order (a turn is running) is read-only. */}
-        <div
-        data-no-translate
+        <div data-no-translate
         className={locked ? undefined : "oh-action-text"}
         role={locked ? undefined : "button"}
         tabIndex={locked ? undefined : 0}
         title={locked ? TURN_RUNNING_NOTE : "Edit this order"}
         onClick={locked ? undefined : onEdit}
-        onKeyDown={locked ? undefined : (event) => { if (event.key === "Enter") onEdit(); }}
+        onKeyDown={locked ? undefined : handleTextKeyDown}
         style={{ color: "rgba(255,255,255,0.82)", fontSize: "0.82rem", whiteSpace: "pre-wrap", wordBreak: "break-word", cursor: locked ? "default" : undefined }}
         >
         {label}
@@ -893,6 +897,21 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
         setPanelHeight(px);
         writePanelHeight(browserStorage(), px);
     }, []);
+    // The width, dragged by the right edge or the top-right corner (null: the default).
+    const [panelWidth, setPanelWidth] = React.useState(() => readStoredPx(browserStorage(), ACTIONS_PANEL_WIDTH_KEY));
+    const showSizeWhileDragged = (size) => {
+        const panel = panelRef.current;
+        if (!panel) return;
+        if (size.width) panel.style.width = `${size.width}px`;
+        if (size.height) panel.style.setProperty(PANEL_HEIGHT_VAR, `${size.height}px`);
+    };
+    const commitPanelSize = (patch) => {
+        if ("width" in patch) {
+            setPanelWidth(patch.width);
+            writeStoredPx(browserStorage(), ACTIONS_PANEL_WIDTH_KEY, patch.width);
+        }
+        if ("height" in patch) commitPanelHeight(patch.height);
+    };
     const inputRef = React.useRef(null);
     const lastRoundRef = React.useRef(null);
     const isMobile = useIsMobile();
@@ -1158,11 +1177,17 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
             pointerEvents: isOpen ? "auto" : "none",
             position: "fixed",
             transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease",
-            width: "26.25rem",
+            width: panelWidthCss(panelWidth) ?? "26.25rem",
             zIndex: 9998,
         }}
         >
         <PanelResizeHandle panelRef={panelRef} height={panelHeight} onCommit={commitPanelHeight} touch={isTouch} shown={isOpen} />
+        {isOpen && (
+            <>
+            <PanelResizeGrip axis="x" panelRef={panelRef} label="Resize the Actions panel's width" clampWidth={clampPanelWidth} clampHeight={clampPanelHeight} onLive={showSizeWhileDragged} onCommit={commitPanelSize} touch={isTouch} />
+            <PanelResizeGrip axis="xy" panelRef={panelRef} label="" clampWidth={clampPanelWidth} clampHeight={clampPanelHeight} onLive={showSizeWhileDragged} onCommit={commitPanelSize} touch={isTouch} />
+            </>
+        )}
         <div
         style={{
             alignItems: "center",
@@ -1379,7 +1404,7 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
                     />
                 )}
                 {submittedOpen && (
-                    <div style={{ ...listStyle, resize: "horizontal", overflow: "auto", maxWidth: "100%" }}>
+                    <div style={listStyle}>
                     {submittedActions.length === 0 && (
                         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.8rem", fontStyle: "italic", margin: 0 }}>
                         No actions submitted yet.

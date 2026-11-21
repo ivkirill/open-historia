@@ -1,6 +1,17 @@
 /*! Open Historia — portions (defensive date rendering) © 2026 Nicholas Krol, AGPL-3.0-or-later (see LICENSE). */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { APP_HEIGHT, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT, useTouchPrimary } from "../../runtime/mobileUi.js";
+import { clampPanelHeight } from "./actionsPanelLayout.js";
+import { PanelResizeGrip } from "./panelResizeGrip.jsx";
+import {
+    EVENTS_PANEL_HEIGHT_KEY,
+    EVENTS_PANEL_WIDTH_KEY,
+    clampPanelWidth,
+    eventsPanelHeightCss,
+    panelWidthCss,
+    readStoredPx,
+    writeStoredPx,
+} from "./panelSize.js";
 import dayjs from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import {
@@ -1007,6 +1018,14 @@ const EmptyPanelState = ({ text }) => (
     </div>
 );
 
+const panelStorage = () => {
+    try {
+        return typeof window === "undefined" ? null : window.localStorage;
+    } catch {
+        return null;
+    }
+};
+
 const PanelChrome = ({
     children,
     eyebrow,
@@ -1015,11 +1034,49 @@ const PanelChrome = ({
     title,
     topOffset,
     onClose,
+    // Only the Events panel: its height and width follow its grips and are
+    // remembered on this device (panelSize.js).
+    resizable = false,
 }) => {
     const hasHeaderText = Boolean(eyebrow || title || subtitle);
+    const panelRef = React.useRef(null);
+    const touch = useTouchPrimary();
+    const [width, setWidth] = React.useState(() => (resizable ? readStoredPx(panelStorage(), EVENTS_PANEL_WIDTH_KEY) : null));
+    const [height, setHeight] = React.useState(() => (resizable ? readStoredPx(panelStorage(), EVENTS_PANEL_HEIGHT_KEY) : null));
+    const showSizeWhileDragged = (size) => {
+        const panel = panelRef.current;
+        if (!panel) return;
+        if (size.width) panel.style.width = `${size.width}px`;
+        if (size.height) panel.style.height = `${size.height}px`;
+    };
+    // The px a drag wrote straight onto the panel is replaced on this render:
+    // the style below changes with the size.
+    const commitSize = (patch) => {
+        if ("width" in patch) {
+            writeStoredPx(panelStorage(), EVENTS_PANEL_WIDTH_KEY, patch.width);
+            setWidth(patch.width);
+        }
+        if ("height" in patch) {
+            writeStoredPx(panelStorage(), EVENTS_PANEL_HEIGHT_KEY, patch.height);
+            setHeight(patch.height);
+        }
+    };
+    const grip = (axis, label) => (
+        <PanelResizeGrip
+        axis={axis}
+        panelRef={panelRef}
+        label={label}
+        clampWidth={clampPanelWidth}
+        clampHeight={clampPanelHeight}
+        onLive={showSizeWhileDragged}
+        onCommit={commitSize}
+        touch={touch}
+        />
+    );
 
     return (
         <div
+        ref={panelRef}
         style={{
             ...panelSurface,
             bottom: isOpen ? `calc(4.9rem + ${SAFE_BOTTOM})` : "-34rem",
@@ -1029,7 +1086,8 @@ const PanelChrome = ({
             // calc(100vh - 33rem) collapsed to the 10rem floor, so grow to at
             // least 30rem while still capping at calc(100vh - 9rem) to fit. (The
             // min() already caps height, so no separate maxHeight is needed.)
-            height: `min(calc(${APP_HEIGHT} - 9rem), max(calc(${APP_HEIGHT} - 33rem), 30rem))`,
+            height: eventsPanelHeightCss(resizable ? height : null, APP_HEIGHT),
+            ...(resizable && width ? { width: panelWidthCss(width, `${SAFE_LEFT} - ${SAFE_RIGHT}`) } : null),
             left: `calc(0.5rem + ${SAFE_LEFT})`,
             maxWidth: `calc(100vw - 1rem - ${SAFE_LEFT} - ${SAFE_RIGHT})`,
             minHeight: "10rem",
@@ -1038,6 +1096,13 @@ const PanelChrome = ({
             transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease",
         }}
         >
+        {resizable && isOpen && (
+            <>
+            {grip("y", "Resize the Events panel's height")}
+            {grip("x", "Resize the Events panel's width")}
+            {grip("xy", "")}
+            </>
+        )}
         <div
         style={{
             borderBottom: hasHeaderText ? "1px solid var(--oh-ui-line, rgba(255,255,255,0.07))" : "none",
@@ -2192,6 +2257,7 @@ const TimelineHistoryPanel = ({
         ) : (record?.rangeLabel || "")}
         title="Events"
         topOffset={topOffset}
+        resizable
         >
         {/* The shared markdown sheet: tables in an event body or a document. */}
         <MarkdownStyleInjector />
