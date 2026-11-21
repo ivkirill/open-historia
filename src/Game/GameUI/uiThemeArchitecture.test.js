@@ -55,7 +55,9 @@ test("the main menu, its pages and the popups take the theme, the original colou
 });
 
 test("Actions, Projects and diplomatic conversation chrome consume tokens while status colors remain semantic", () => {
-  assert.match(actions, /backgroundColor: "var\(--oh-ui-bg,/);
+  // The left-hand panels share one themed surface (hudPanel.js).
+  assert.match(actions, /<HudPanel panel="actions"/);
+  assert.match(read("./hudPanel.js"), /backgroundColor: "var\(--oh-ui-overlay, rgba\(24,24,27,0\.95\)\)"/);
   assert.match(projects, /const cardStyle = \{[\s\S]*?backgroundColor: "var\(--oh-ui-surface,/);
   assert.match(projects, /const selectStyle = \{[\s\S]*?backgroundColor: "var\(--oh-ui-surface,/);
   assert.match(diplomacy, /data-diplomacy-header="modern"[\s\S]*?background: "var\(--oh-ui-header,/);

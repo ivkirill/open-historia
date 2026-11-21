@@ -27,6 +27,7 @@ import { useActiveFeatures } from "../../runtime/gameFeatures.js";
 import { Actions } from "./actions";
 import { Social } from "./social.jsx";
 import { DOCK_BOTTOM_REM, DOCK_BUTTON_REM, DOCK_GAP_REM, DOCK_HEIGHT_REM, DOCK_ICON_PX, DOCK_LEFT_REM, DOCK_PAD_REM, useDockGeometry } from "./hudDock.js";
+import { HudPanel, PanelCloseButton, PanelTabs } from "./hudPanel.jsx";
 import { documentsReadableBy, isDocumentExchange } from "../../runtime/reportDelivery.js";
 import { Presence } from "./presence.jsx";
 import StorageProblemNotice from "./storageProblemNotice.jsx";
@@ -4368,23 +4369,11 @@ const ChatPanel = ({ isOpen, onClose, requestedCountry, requestedDraft = "", onC
         return (
             <>
             <MarkdownStyleInjector />
-            {/* Laid out against the dock, not the screen: the dock's
-                backdrop-filter makes it this fixed panel's containing block,
-                so left and bottom are measured from the dock, which keeps in
-                from a notch and up from the home indicator itself. On a touch
-                screen the panel fits what a phone shows: the visible height
-                (100vh runs under a browser's bars, and took the header and its
-                ✕ off the top), less the insets top and bottom; a width that
-                leaves 0.5rem at the right, since it starts 1rem in (the dock's
-                0.5rem, then its own); and a 10rem floor, as 24rem is taller
-                than a phone held sideways. Every inset is 0 on a desktop.
-                Beside an open Advisor/Country drawer the width also gives up the
-                drawer's live width (dragging its edge updates it in the same
-                frame), so the two meet with the same 0.5rem gap and never stack.
-                Nothing else is held back: the panel shrinks only once the drawer
-                would really reach it, not the moment the drawer opens. */}
-            <div style={{ position: "fixed", bottom: isOpen ? "4.25rem" : "-52rem", left: "0.5rem", width: "min(58rem, calc(100vw - 1rem - var(--oh-right-drawer-safe-offset, 0px)))", height: "min(50rem, calc(100vh - 8rem))", minHeight: "24rem", backgroundColor: "var(--oh-ui-overlay, rgba(24,24,27,0.95))", backdropFilter: "blur(8px)", borderRadius: "16px", border: "1px solid var(--oh-ui-line, rgba(255,255,255,0.1))", boxShadow: "-4px 0 24px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06)", zIndex: 9998, overflow: "hidden", transition: "bottom 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s ease", opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? "auto" : "none", fontFamily: "sans-serif", color: "white", display: "flex", flexDirection: "column",
-                ...(isTouch ? { width: `min(58rem, calc(100vw - 1.5rem - ${SAFE_LEFT} - ${SAFE_RIGHT}))`, height: `min(50rem, calc(${APP_HEIGHT} - 10.25rem - ${SAFE_TOP} - ${SAFE_BOTTOM}))`, minHeight: "10rem" } : {}) }}>
+            {/* The shared shell (hudPanel.jsx): the same edge, line above the dock,
+                height and surface as the other left-hand panels; its own width,
+                which starts wide for the list and the conversation side by side
+                and gives way to an open Advisor or Country drawer. */}
+            <HudPanel panel="chat" isOpen={isOpen} ariaLabel="Diplomacy">
 
             {chatsLoadFailed ? (
                 <StorageProblemNotice title="Could not load your conversations." detail="Nothing new is saved until they load." onRetry={retryChatsLoad} retrying={chatsRetrying} retryIcon={<RetryIcon />} />
@@ -4411,24 +4400,21 @@ const ChatPanel = ({ isOpen, onClose, requestedCountry, requestedDraft = "", onC
                                 <div style={{ marginTop: ".13rem", fontSize: ".56rem", color: "rgba(255,255,255,.32)" }}>Conversations, institutions and statecraft</div>
                             </div>
                         </div>
-                        <button className="oh-tap" aria-label="Close diplomacy panel" onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "1.1rem", lineHeight: 1, padding: "0.15rem 0.3rem", borderRadius: "6px" }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "white"; e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = "none"; }}>✕</button>
+                        <PanelCloseButton onClick={onClose} label="Close diplomacy panel" />
                     </div>
-                    {/* Three tabs are wider than a phone's header: there they
-                        stay one row that scrolls sideways, not two. */}
-                    <div style={{ display: "flex", gap: ".35rem", marginTop: isTouch ? ".4rem" : ".55rem", ...(isTouch ? { flexWrap: "nowrap", overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } : {}) }}>
-                        {[
+                    {/* The shared tab strip (hudPanel.jsx); on a phone it scrolls
+                        sideways as one row rather than wrapping. */}
+                    <div style={{ marginTop: isTouch ? ".4rem" : ".55rem" }}>
+                        <PanelTabs
+                        tabs={[
                             ["chats", "contacts", "Contacts", chatUnreadCount],
                             ["institutions", "institutions", "Institutions", institutionUnreadCount],
                             ...(espionageOn ? [["spy", "intelligence", "Intelligence", 0]] : []),
-                        ].map(([key, iconType, label, count]) => (
-                            <button key={key} className="oh-tap-row" onClick={() => setView(key)} style={{ flex: "0 0 auto", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: ".38rem", padding: isTouch ? ".3rem .58rem" : ".34rem .68rem", borderRadius: "8px", fontSize: ".72rem", fontWeight: 750, cursor: "pointer", fontFamily: "sans-serif", border: "1px solid " + (currentView === key ? "var(--oh-grey-border-strong)" : "var(--oh-ui-line, rgba(255,255,255,.07))"), background: currentView === key ? "var(--oh-ui-active, var(--oh-grey-selected))" : "var(--oh-ui-overlay-card, rgba(255,255,255,.025))", color: currentView === key ? "white" : "rgba(255,255,255,0.48)" }}>
-                                <span aria-hidden="true" style={{ display: "inline-flex", opacity: .8 }}><WorkspaceTabIcon type={iconType} size={13} /></span>
-                                <span>{label}</span>
-                                {Number(count) > 0 && <span style={{ minWidth: "1.05rem", height: "1.05rem", padding: "0 .25rem", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: currentView === key ? "rgba(255,255,255,.14)" : "rgba(96,165,250,.16)", color: currentView === key ? "#fff" : "#93c5fd", fontSize: ".57rem", fontWeight: 800 }}>{count}</span>}
-                            </button>
-                        ))}
+                        ].map(([key, iconType, label, count]) => ({ key, label, icon: <WorkspaceTabIcon type={iconType} size={13} />, count, unread: true }))}
+                        active={currentView}
+                        onSelect={setView}
+                        touch={isTouch}
+                        />
                     </div>
                 </div>
                 {currentView === "spy" ? (
@@ -4515,7 +4501,7 @@ const ChatPanel = ({ isOpen, onClose, requestedCountry, requestedDraft = "", onC
                 )}
                 </>
             )}
-            </div>
+            </HudPanel>
             </>
         );
 };

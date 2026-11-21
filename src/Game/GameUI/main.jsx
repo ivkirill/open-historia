@@ -31,6 +31,7 @@ import { useIsMobile } from "../../runtime/useIsMobile.js";
 import { useBackToClose } from "../../runtime/backToClose.js";
 import { MAP_CARD_OPENED, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT } from "../../runtime/mobileUi.js";
 import { DOCK_BOTTOM_REM, DOCK_HEIGHT_REM, DOCK_LEFT_REM, WAR_ROOM_BUTTON_REM, useDockGeometry } from "./hudDock.js";
+import { HudPanelLayer } from "./hudPanel.jsx";
 import { showEveryTroop } from "../Map/troopDetail.js";
 import { dismissRegionPopup } from "../Selection/Regions.jsx";
 import { dismissUnitPopup } from "../Selection/Units.jsx";
@@ -805,6 +806,9 @@ const Main = ({
     <>
       {showWebGLWarning && <WebGLWarningPopup />}
       <div data-oh-hud="" style={hudStyle}>
+        {/* The left-hand panels are drawn into a layer of their own here, not
+            inside the dock (hudPanel.jsx). */}
+        <HudPanelLayer>
         <LibraryTopBar onOpenSettings={() => {
           setSettingsScope("app");
           setSettingsInitialSection("general");
@@ -857,6 +861,7 @@ const Main = ({
             />
           </>
         )}
+        </HudPanelLayer>
       </div>
       {(hasFronts || isWarRoomOpen) && (
         <WarRoomButton open={warRoomShown} isMobile={isMobile} onToggle={toggleWarRoom} />

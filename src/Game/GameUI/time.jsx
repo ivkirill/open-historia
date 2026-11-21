@@ -1,17 +1,7 @@
 /*! Open Historia — portions (defensive date rendering) © 2026 Nicholas Krol, AGPL-3.0-or-later (see LICENSE). */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { APP_HEIGHT, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT, useTouchPrimary } from "../../runtime/mobileUi.js";
-import { clampPanelHeight } from "./actionsPanelLayout.js";
-import { PanelResizeGrip } from "./panelResizeGrip.jsx";
-import {
-    EVENTS_PANEL_HEIGHT_KEY,
-    EVENTS_PANEL_WIDTH_KEY,
-    clampPanelWidth,
-    eventsPanelHeightCss,
-    panelWidthCss,
-    readStoredPx,
-    writeStoredPx,
-} from "./panelSize.js";
+import { useTouchPrimary } from "../../runtime/mobileUi.js";
+import { HudPanel, PanelCloseButton } from "./hudPanel.jsx";
 import dayjs from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import {
@@ -102,9 +92,6 @@ import { rememberSkipLength, scheduleFrontsPrethink, stopFrontsPrethink } from "
 dayjs.extend(advancedFormat);
 
 const TIMELINE_STYLE_ID = "timeline-ui-style";
-// Clamped so the timeline panel and widget always fit phone screens.
-const PANEL_WIDTH = "min(26.25rem, calc(100vw - 0.9rem))";
-
 const ensureTimelineStyles = () => {
     if (typeof document === "undefined" || document.getElementById(TIMELINE_STYLE_ID)) {
         return;
@@ -189,13 +176,6 @@ const SpinnerRing = ({ size = 14, tone = "rgba(255,255,255,0.88)" }) => {
     );
 };
 
-const CloseIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-);
-
 const CalendarIcon = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M8 2v4" />
@@ -218,20 +198,6 @@ const ChevronDownIcon = () => (
     <path d="m6 9 6 6 6-6" />
     </svg>
 );
-
-const panelSurface = {
-    backgroundColor: "var(--oh-ui-overlay, var(--oh-hud-bg-strong))",
-    backdropFilter: "var(--oh-hud-blur)",
-    border: "1px solid var(--oh-ui-line, var(--oh-hud-border))",
-    borderRadius: "18px",
-    boxShadow: "var(--oh-hud-shadow)",
-    color: "white",
-    fontFamily: "sans-serif",
-    overflow: "hidden",
-    position: "fixed",
-    width: PANEL_WIDTH,
-    zIndex: 9998,
-};
 
 // The date bar takes the theme's glass, as the menu button and the session
 // pill beside it do; the HUD's own glass alone stayed all but the default's
@@ -1018,91 +984,22 @@ const EmptyPanelState = ({ text }) => (
     </div>
 );
 
-const panelStorage = () => {
-    try {
-        return typeof window === "undefined" ? null : window.localStorage;
-    } catch {
-        return null;
-    }
-};
-
+// The Events and Timeline panels' frame: the shared shell (hudPanel.jsx), a
+// title with an optional line under it, and a scrolling body. `panel` is the
+// slot it stands for: "history" or "skip".
 const PanelChrome = ({
     children,
     eyebrow,
     isOpen,
     subtitle,
     title,
-    topOffset,
     onClose,
-    // Only the Events panel: its height and width follow its grips and are
-    // remembered on this device (panelSize.js).
-    resizable = false,
+    panel,
 }) => {
     const hasHeaderText = Boolean(eyebrow || title || subtitle);
-    const panelRef = React.useRef(null);
-    const touch = useTouchPrimary();
-    const [width, setWidth] = React.useState(() => (resizable ? readStoredPx(panelStorage(), EVENTS_PANEL_WIDTH_KEY) : null));
-    const [height, setHeight] = React.useState(() => (resizable ? readStoredPx(panelStorage(), EVENTS_PANEL_HEIGHT_KEY) : null));
-    const showSizeWhileDragged = (size) => {
-        const panel = panelRef.current;
-        if (!panel) return;
-        if (size.width) panel.style.width = `${size.width}px`;
-        if (size.height) panel.style.height = `${size.height}px`;
-    };
-    // The px a drag wrote straight onto the panel is replaced on this render:
-    // the style below changes with the size.
-    const commitSize = (patch) => {
-        if ("width" in patch) {
-            writeStoredPx(panelStorage(), EVENTS_PANEL_WIDTH_KEY, patch.width);
-            setWidth(patch.width);
-        }
-        if ("height" in patch) {
-            writeStoredPx(panelStorage(), EVENTS_PANEL_HEIGHT_KEY, patch.height);
-            setHeight(patch.height);
-        }
-    };
-    const grip = (axis, label) => (
-        <PanelResizeGrip
-        axis={axis}
-        panelRef={panelRef}
-        label={label}
-        clampWidth={clampPanelWidth}
-        clampHeight={clampPanelHeight}
-        onLive={showSizeWhileDragged}
-        onCommit={commitSize}
-        touch={touch}
-        />
-    );
 
     return (
-        <div
-        ref={panelRef}
-        style={{
-            ...panelSurface,
-            bottom: isOpen ? `calc(4.9rem + ${SAFE_BOTTOM})` : "-34rem",
-            display: "flex",
-            flexDirection: "column",
-            // Match the Actions/Chat panels: on short laptop screens the sliver
-            // calc(100vh - 33rem) collapsed to the 10rem floor, so grow to at
-            // least 30rem while still capping at calc(100vh - 9rem) to fit. (The
-            // min() already caps height, so no separate maxHeight is needed.)
-            height: eventsPanelHeightCss(resizable ? height : null, APP_HEIGHT),
-            ...(resizable && width ? { width: panelWidthCss(width, `${SAFE_LEFT} - ${SAFE_RIGHT}`) } : null),
-            left: `calc(0.5rem + ${SAFE_LEFT})`,
-            maxWidth: `calc(100vw - 1rem - ${SAFE_LEFT} - ${SAFE_RIGHT})`,
-            minHeight: "10rem",
-            opacity: isOpen ? 1 : 0,
-            pointerEvents: isOpen ? "auto" : "none",
-            transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease",
-        }}
-        >
-        {resizable && isOpen && (
-            <>
-            {grip("y", "Resize the Events panel's height")}
-            {grip("x", "Resize the Events panel's width")}
-            {grip("xy", "")}
-            </>
-        )}
+        <HudPanel panel={panel} isOpen={isOpen} ariaLabel={title}>
         <div
         style={{
             borderBottom: hasHeaderText ? "1px solid var(--oh-ui-line, rgba(255,255,255,0.07))" : "none",
@@ -1130,41 +1027,14 @@ const PanelChrome = ({
             )}
             </div>
         )}
-        <button
-        type="button"
-        className="oh-tap"
-        onClick={onClose}
-        style={{
-            background: "none",
-            border: "none",
-            borderRadius: "6px",
-            color: "rgba(255,255,255,0.5)",
-            cursor: "pointer",
-            display: "flex",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            padding: "0.15rem 0.3rem",
-            transition: "all 0.15s ease",
-        }}
-        onMouseEnter={(event) => {
-            event.currentTarget.style.background = "rgba(255,255,255,0.08)";
-            event.currentTarget.style.color = "white";
-        }}
-        onMouseLeave={(event) => {
-            event.currentTarget.style.background = "none";
-            event.currentTarget.style.color = "rgba(255,255,255,0.5)";
-        }}
-        aria-label="Close panel"
-        >
-        <CloseIcon />
-        </button>
+        <PanelCloseButton onClick={onClose} label="Close panel" />
         </div>
         </div>
 
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: "0.85rem", minHeight: 0, overflowY: "auto", padding: "0.95rem 1.25rem 1.25rem", scrollbarWidth: "none" }}>
         {children}
         </div>
-        </div>
+        </HudPanel>
     );
 };
 
@@ -1668,7 +1538,7 @@ const TimelineSkipPanel = ({
         isOpen={isOpen}
         onClose={onClose}
         title="Timeline"
-        topOffset={topOffset}
+        panel="skip"
         >
         <div
         style={{
@@ -2256,8 +2126,7 @@ const TimelineHistoryPanel = ({
             />
         ) : (record?.rangeLabel || "")}
         title="Events"
-        topOffset={topOffset}
-        resizable
+        panel="history"
         >
         {/* The shared markdown sheet: tables in an event body or a document. */}
         <MarkdownStyleInjector />

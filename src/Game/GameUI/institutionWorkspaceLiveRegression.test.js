@@ -55,8 +55,10 @@ test("formal institution council channels cannot be deleted like disposable dipl
 
 test("Diplomacy uses the restored workspace-sized shell", () => {
   const chat = read("./chat.jsx");
-  assert.match(chat, /width: "min\(58rem, calc\(100vw - 1rem - var\(--oh-right-drawer-safe-offset, 0px\)\)\)"/);
-  assert.match(chat, /height: "min\(50rem, calc\(100vh - 8rem\)\)"/);
+  // Workspace-sized: it starts at 58rem wide, where the other panels start at
+  // 26.25rem; the height is the one all the left-hand panels share (hudPanel.js).
+  assert.match(chat, /<HudPanel panel="chat"/);
+  assert.match(read("./hudPanel.js"), /chat: Object\.freeze\(\{ defaultWidth: "58rem"/);
   assert.doesNotMatch(chat, /width: "26\.25rem"/);
 });
 

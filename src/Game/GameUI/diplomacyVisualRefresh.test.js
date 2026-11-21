@@ -42,7 +42,9 @@ test("composer uses the modern send icon and preserves auto-growing textarea beh
 });
 
 test("diplomacy yields space to the live desktop right drawer", () => {
-  assert.match(source, /width: "min\(58rem, calc\(100vw - 1rem - var\(--oh-right-drawer-safe-offset, 0px\)\)\)"/);
+  // Every left-hand panel stops at the drawer now (hudPanel.js), Diplomacy among them.
+  assert.match(source, /<HudPanel panel="chat"/);
+  assert.match(fs.readFileSync(new URL("./hudPanel.js", import.meta.url), "utf8"), /export const HUD_PANEL_WIDTH_CAP = `calc\(100vw - [^`]*var\(--oh-right-drawer-safe-offset, 0px\)\)`;/);
   assert.match(main, /const RIGHT_DRAWER_SAFE_OFFSET_VAR = "--oh-right-drawer-safe-offset"/);
   assert.match(main, /const rightDrawerSafeOffset = rightDrawerOpen && !isMobile/);
   assert.match(main, /style\.setProperty\(RIGHT_DRAWER_SAFE_OFFSET_VAR, rightDrawerSafeOffset\)/);

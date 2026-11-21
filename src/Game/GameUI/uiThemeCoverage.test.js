@@ -59,15 +59,19 @@ test("The dock's tray, search, the date bar and the map-mode switch take the the
 test("Diplomacy list, tabs, unread filter, thread controls and workspace use themed chrome", () => {
   assert.match(diplomacy, /data-diplomacy-workspace-header="modern"[\s\S]*?background: "var\(--oh-ui-overlay-header, transparent\)"/);
   assert.match(diplomacy, /data-diplomacy-thread-row="modern"[\s\S]*?background: hovered \? "var\(--oh-ui-hover,/);
-  assert.match(diplomacy, /backgroundColor: "var\(--oh-ui-overlay, rgba\(24,24,27,0\.95\)\)"/);
-  assert.match(diplomacy, /background: currentView === key \? "var\(--oh-ui-active,/);
+  // The shell and the tab strip are the shared ones (hudPanel.js, hudPanel.jsx).
+  assert.match(diplomacy, /<HudPanel panel="chat"/);
+  assert.match(read("./hudPanel.js"), /backgroundColor: "var\(--oh-ui-overlay, rgba\(24,24,27,0\.95\)\)"/);
+  assert.match(diplomacy, /<PanelTabs/);
+  assert.match(read("./hudPanel.jsx"), /background: selected \? "var\(--oh-ui-active,/);
   assert.match(diplomacy, /background: showUnreadOnly \? "var\(--oh-ui-active,/);
   assert.match(diplomacy, /Start New Chat/);
   assert.match(diplomacy, /onMouseLeave=\{e => e\.currentTarget\.style\.background = "var\(--oh-ui-overlay-card,/);
 });
 
-test("Events and Timeline use themeable translucent surfaces without changing skip guards", () => {
-  assert.match(time, /const panelSurface = \{[\s\S]*?backgroundColor: "var\(--oh-ui-overlay,/);
+test("Events and Timeline use themeable surfaces without changing skip guards", () => {
+  assert.match(time, /<HudPanel panel=\{panel\}/);
+  assert.match(read("./hudPanel.js"), /const HUD_PANEL_SURFACE = Object\.freeze\(\{[\s\S]*?backgroundColor: "var\(--oh-ui-overlay,/);
   assert.match(time, /const EventCard = [\s\S]*?background: "var\(--oh-ui-overlay-card,/);
   assert.match(time, /const JumpNode = [\s\S]*?background: hovered \? "var\(--oh-ui-hover,/);
   assert.match(time, /background: "var\(--oh-ui-active, rgba\(37,99,235,0\.2\)\)"/);

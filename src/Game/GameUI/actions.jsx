@@ -1,6 +1,6 @@
 /*! Open Historia — portions (panel sizing on small screens) © 2026 Nicholas Krol, AGPL-3.0-or-later (see LICENSE). */
 import React from "react";
-import { APP_HEIGHT, APP_HEIGHT_VAR, useTouchPrimary } from "../../runtime/mobileUi.js";
+import { useTouchPrimary } from "../../runtime/mobileUi.js";
 import { isComposerSendKey } from "../../runtime/composerKeys.js";
 import { useIsMobile } from "../../runtime/useIsMobile.js";
 import dayjs from "dayjs";
@@ -28,20 +28,14 @@ import { queuedActionIds, selectSavedSuggestions, suggestionsFellBack } from "./
 import { ProjectsBoard, ProjectsTabIcon } from "./projects.jsx";
 import { DOCK_BUTTON_REM, DOCK_ICON_PX } from "./hudDock.js";
 import "./actionItem.css";
-import { PanelResizeGrip } from "./panelResizeGrip.jsx";
-import { ACTIONS_PANEL_WIDTH_KEY, clampPanelWidth, panelWidthCss, readStoredPx, writeStoredPx } from "./panelSize.js";
+import { HudPanel, PanelCloseButton, PanelTabs } from "./hudPanel.jsx";
 import {
     PANEL_HEIGHT_VAR,
     actionsLayoutReducer,
-    clampPanelHeight,
     initialActionsLayout,
-    keyedPanelHeight,
     openSectionOf,
-    panelHeightCss,
     readGoalOpen,
-    readPanelHeight,
     writeGoalOpen,
-    writePanelHeight,
 } from "./actionsPanelLayout.js";
 
 dayjs.extend(advancedFormat);
@@ -731,115 +725,6 @@ const browserStorage = () => {
     }
 };
 
-// The visible height (mobileUi.js APP_HEIGHT, which follows a phone's address
-// bar and keyboard) and the root font size, in px, for the drag.
-const screenMetrics = () => {
-    if (typeof window === "undefined") return { viewport: 800, rem: 16 };
-    const root = document.documentElement;
-    const rem = parseFloat(getComputedStyle(root).fontSize) || 16;
-    const viewport = parseFloat(root.style.getPropertyValue(APP_HEIGHT_VAR)) || window.innerHeight || 800;
-    return { viewport, rem };
-};
-
-// The panel's top edge, the one that is free: the panel stands on the dock at
-// the bottom of the screen, on a phone too. Drag it (mouse, finger or pen), or
-// focus it and use the arrow keys (Shift for bigger steps, Home and End for the
-// smallest and the tallest); a double-click or Enter gives back the default
-// height. The grip is the advisor's and the country panel's edge (advisor.jsx),
-// turned on its side. Pointer capture keeps the drag alive off the thin strip.
-const PanelResizeHandle = ({ panelRef, height, onCommit, touch, shown = true }) => {
-    const [dragging, setDragging] = React.useState(false);
-    const [hover, setHover] = React.useState(false);
-    const [focused, setFocused] = React.useState(false);
-    const currentHeight = () => panelRef.current?.clientHeight || 0;
-
-    const handlePointerDown = (event) => {
-        if (event.button !== 0) return;
-        event.preventDefault();
-        const target = event.currentTarget;
-        try { target.setPointerCapture(event.pointerId); } catch { /* optional */ }
-        const startY = event.clientY;
-        const startHeight = currentHeight();
-        const metrics = screenMetrics();
-        let latest = null;
-        setDragging(true);
-        // Straight onto the panel while the pointer moves, and into React (and
-        // storage) once, when it lets go.
-        const onMove = (moveEvent) => {
-            latest = clampPanelHeight(startHeight + (startY - moveEvent.clientY), metrics);
-            panelRef.current?.style.setProperty(PANEL_HEIGHT_VAR, `${latest}px`);
-        };
-        const onUp = () => {
-            setDragging(false);
-            target.removeEventListener("pointermove", onMove);
-            target.removeEventListener("pointerup", onUp);
-            target.removeEventListener("pointercancel", onUp);
-            if (latest !== null) onCommit(latest);
-        };
-        target.addEventListener("pointermove", onMove);
-        target.addEventListener("pointerup", onUp);
-        target.addEventListener("pointercancel", onUp);
-    };
-
-    const handleKeyDown = (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            onCommit(null);
-            return;
-        }
-        const next = keyedPanelHeight(event.key, { current: currentHeight(), shift: event.shiftKey, ...screenMetrics() });
-        if (next === null) return;
-        event.preventDefault();
-        onCommit(next);
-    };
-
-    const lit = dragging || focused;
-    return (
-        <div
-        role="separator"
-        aria-orientation="horizontal"
-        aria-label="Resize the Actions panel"
-        aria-valuenow={height ?? undefined}
-        tabIndex={shown ? 0 : -1}
-        title="Drag to resize. Double-click for the default height."
-        onPointerDown={handlePointerDown}
-        onPointerEnter={() => setHover(true)}
-        onPointerLeave={() => setHover(false)}
-        onDoubleClick={() => onCommit(null)}
-        onKeyDown={handleKeyDown}
-        // Lit for the keyboard's focus, not for the click that starts a drag.
-        onFocus={(event) => {
-            let keyboard = true;
-            try { keyboard = event.currentTarget.matches(":focus-visible"); } catch { /* older engine: show it */ }
-            setFocused(keyboard);
-        }}
-        onBlur={() => setFocused(false)}
-        style={{
-            alignItems: "center",
-            cursor: "ns-resize",
-            display: "flex",
-            height: touch ? "10px" : "8px",
-            justifyContent: "center",
-            left: 0,
-            outline: "none",
-            position: "absolute",
-            right: 0,
-            top: 0,
-            touchAction: "none",
-            zIndex: 30,
-        }}
-        >
-        <div style={{
-            backgroundColor: lit ? "var(--oh-ui-accent, #2bc1f3)" : hover ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.22)",
-            borderRadius: "2px",
-            height: "3px",
-            transition: "background-color 0.15s",
-            width: "42px",
-        }} />
-        </div>
-    );
-};
-
 // `requestedTab`: { tab } from outside (the advisor's board card opens the
 // Projects tab); a new object each time, so the same tab can be asked for twice.
 const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = null }) => {
@@ -890,28 +775,6 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
         writeGoalOpen(browserStorage(), layout.goalOpen);
     }, [layout.goalOpen]);
     const showSuggested = hasRequestedSuggestions || isSuggesting || suggestions.length > 0;
-    // The height the player dragged the panel to (null: the default), kept too.
-    const panelRef = React.useRef(null);
-    const [panelHeight, setPanelHeight] = React.useState(() => readPanelHeight(browserStorage()));
-    const commitPanelHeight = React.useCallback((px) => {
-        setPanelHeight(px);
-        writePanelHeight(browserStorage(), px);
-    }, []);
-    // The width, dragged by the right edge or the top-right corner (null: the default).
-    const [panelWidth, setPanelWidth] = React.useState(() => readStoredPx(browserStorage(), ACTIONS_PANEL_WIDTH_KEY));
-    const showSizeWhileDragged = (size) => {
-        const panel = panelRef.current;
-        if (!panel) return;
-        if (size.width) panel.style.width = `${size.width}px`;
-        if (size.height) panel.style.setProperty(PANEL_HEIGHT_VAR, `${size.height}px`);
-    };
-    const commitPanelSize = (patch) => {
-        if ("width" in patch) {
-            setPanelWidth(patch.width);
-            writeStoredPx(browserStorage(), ACTIONS_PANEL_WIDTH_KEY, patch.width);
-        }
-        if ("height" in patch) commitPanelHeight(patch.height);
-    };
     const inputRef = React.useRef(null);
     const lastRoundRef = React.useRef(null);
     const isMobile = useIsMobile();
@@ -1148,46 +1011,9 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
     const suggestionButtonLabel = "AI Suggestions";
 
     return (
-        <div
-        ref={panelRef}
-        style={{
-            backdropFilter: "blur(8px)",
-            backgroundColor: "var(--oh-ui-bg, rgba(24, 24, 27, 0.95))",
-            border: "1px solid var(--oh-ui-line, rgba(255,255,255,0.1))",
-            borderRadius: "16px",
-            bottom: isOpen ? "4.25rem" : "-30rem",
-            boxShadow: "-4px 0 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
-            color: "white",
-            display: "flex",
-            flexDirection: "column",
-            fontFamily: "sans-serif",
-            // By default, grow to use the height a taller screen offers (leaving
-            // ~16rem for the top bar), never dropping below a usable 30rem floor
-            // for laptops/phones. Dragged by its top edge, between 20rem and the
-            // screen's height. Never past the 9rem the top UI needs (so it can't
-            // overflow up) either way (actionsPanelLayout.js panelHeightCss). In
-            // a variable, which the Projects tab sizes its tag menu by.
-            [PANEL_HEIGHT_VAR]: panelHeightCss(panelHeight, APP_HEIGHT),
-            height: `var(${PANEL_HEIGHT_VAR})`,
-            minHeight: "10rem",
-            left: "0rem",
-            maxWidth: "calc(100vw - 1rem)",
-            opacity: isOpen ? 1 : 0,
-            overflow: "hidden",
-            pointerEvents: isOpen ? "auto" : "none",
-            position: "fixed",
-            transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease",
-            width: panelWidthCss(panelWidth) ?? "26.25rem",
-            zIndex: 9998,
-        }}
-        >
-        <PanelResizeHandle panelRef={panelRef} height={panelHeight} onCommit={commitPanelHeight} touch={isTouch} shown={isOpen} />
-        {isOpen && (
-            <>
-            <PanelResizeGrip axis="x" panelRef={panelRef} label="Resize the Actions panel's width" clampWidth={clampPanelWidth} clampHeight={clampPanelHeight} onLive={showSizeWhileDragged} onCommit={commitPanelSize} touch={isTouch} />
-            <PanelResizeGrip axis="xy" panelRef={panelRef} label="" clampWidth={clampPanelWidth} clampHeight={clampPanelHeight} onLive={showSizeWhileDragged} onCommit={commitPanelSize} touch={isTouch} />
-            </>
-        )}
+        // The shell is the shared one (hudPanel.jsx); the Projects tab sizes its
+        // tag menu by the height, through this variable.
+        <HudPanel panel="actions" isOpen={isOpen} ariaLabel="Actions" style={{ [PANEL_HEIGHT_VAR]: "var(--oh-hud-panel-height)" }}>
         <div
         style={{
             alignItems: "center",
@@ -1198,55 +1024,18 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
             padding: isTouch ? "0.6rem 0.9rem 0.55rem" : "0.8rem 1rem 0.65rem",
         }}
         >
-        <div role="tablist" style={{ display: "flex", gap: ".35rem", minWidth: 0, overflowX: "auto", scrollbarWidth: "none" }}>
-        {ACTIONS_TABS.map(([key, label]) => {
-            const active = tab === key;
-            return (
-                <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className="oh-tap-row"
-                onClick={() => setTab(key)}
-                style={{ alignItems: "center", background: active ? "var(--oh-ui-active, var(--oh-grey-selected))" : "rgba(255,255,255,.025)", border: "1px solid " + (active ? "var(--oh-ui-accent, var(--oh-grey-border-strong))" : "rgba(255,255,255,.07)"), borderRadius: "8px", color: active ? "white" : "rgba(255,255,255,0.48)", cursor: "pointer", display: "flex", flex: "0 0 auto", fontFamily: "sans-serif", fontSize: ".8rem", fontWeight: 750, gap: ".38rem", padding: isTouch ? ".3rem .62rem" : ".36rem .74rem", whiteSpace: "nowrap" }}
-                >
-                <span aria-hidden="true" style={{ display: "inline-flex", opacity: .8 }}>{key === "projects" ? <ProjectsTabIcon /> : <OrdersTabIcon />}</span>
-                <span>{label}</span>
-                {key === "projects" && projectCount > 0 && (
-                    <span data-no-translate style={{ alignItems: "center", background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.08)", borderRadius: 999, color: active ? "#fff" : "rgba(255,255,255,0.6)", display: "inline-flex", fontSize: ".57rem", fontWeight: 800, height: "1.05rem", justifyContent: "center", minWidth: "1.05rem", padding: "0 .25rem" }}>{projectCount}</span>
-                )}
-                </button>
-            );
-        })}
-        </div>
-        <button
-        type="button"
-        className="oh-tap"
-        onClick={onClose}
-        aria-label="Close actions"
-        style={{
-            background: "none",
-            border: "none",
-            borderRadius: "6px",
-            color: "rgba(255,255,255,0.5)",
-            cursor: "pointer",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            padding: "0.15rem 0.3rem",
-            transition: "color 0.15s, background 0.15s",
-        }}
-        onMouseEnter={(event) => {
-            event.currentTarget.style.color = "white";
-            event.currentTarget.style.background = "rgba(255,255,255,0.08)";
-        }}
-        onMouseLeave={(event) => {
-            event.currentTarget.style.color = "rgba(255,255,255,0.5)";
-            event.currentTarget.style.background = "none";
-        }}
-        >
-        {"\u2715"}
-        </button>
+        <PanelTabs
+        tabs={ACTIONS_TABS.map(([key, label]) => ({
+            key,
+            label,
+            icon: key === "projects" ? <ProjectsTabIcon /> : <OrdersTabIcon />,
+            count: key === "projects" ? projectCount : 0,
+        }))}
+        active={tab}
+        onSelect={setTab}
+        touch={isTouch}
+        />
+        <PanelCloseButton onClick={onClose} label="Close actions" />
         </div>
 
         {/* The Projects & Operations board, under the same header (projects.jsx). */}
@@ -1548,7 +1337,7 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
         </div>
         </>
         )}
-        </div>
+        </HudPanel>
     );
 };
 

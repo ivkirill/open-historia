@@ -54,6 +54,27 @@ import { RELEASES } from "./notesReleases.js";
 // make UPDATES, newest first by date.
 const NEW_UPDATES = [
   {
+    // "все окна стоят в разных местах, в разно бой и с разными состояниями. Давай проанализируем как их можно
+    // оптимизировать и стандартизировать" (the owner, 2026-11-21): one shell for the left-hand panels
+    // (GameUI/hudPanel.js, hudPanel.jsx), drawn in a layer of their own above the dock; one height shared,
+    // a width each; the dense dark surface; one tab strip and close button; Rostra keeps its phone.
+    id: "2026-11-panels-in-one-place",
+    kind: "minor",
+    date: "2026-11-21",
+    channel: "beta",
+    banners: [
+      {
+        title: "The side panels open in one place",
+        items: [
+          "Actions, Diplomacy, Events and Timeline open in the same place above the buttons at the bottom left, with the same frame and the same dark background.",
+          "They share one height: make one taller and the others follow. Each keeps the width you give it.",
+          "Diplomacy and Timeline can now be resized by their edges too.",
+          "Rostra opens in the same place, still drawn as a phone.",
+        ],
+      },
+    ],
+  },
+  {
     // Sent orders: a click on the text opens an editor, the ✕ shows under a pointer that a deletion moved
     // onto a row (CSS :hover, GameUI/actionItem.css); the Actions and Events panels widen by their right edge and
     // the Events panel grows by its top edge, sizes kept (panelSize.js, panelResizeGrip.jsx). The date widget writes

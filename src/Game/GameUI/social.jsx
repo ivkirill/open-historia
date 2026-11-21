@@ -29,6 +29,8 @@ import { isComposerSendKey } from "../../runtime/composerKeys.js";
 import { bundledFlagUrl, flagImageUrlFromGid } from "../../runtime/countryFlags.js";
 import { formatGameDateReadable } from "../../runtime/gameDates.js";
 import { DOCK_BUTTON_REM, DOCK_ICON_PX } from "./hudDock.js";
+import { HUD_PANEL_BOTTOM, HUD_PANEL_LEFT, HUD_PANEL_WIDTH_CAP, hudPanelMotion } from "./hudPanel.js";
+import { HudPanelPortal, useHudReducedMotion } from "./hudPanel.jsx";
 import { mutateWorldState } from "../../runtime/gameState.js";
 import { getLibraryState } from "../../runtime/library.js";
 import { logDebugEvent } from "../../runtime/debugLog.js";
@@ -599,21 +601,21 @@ const SocialPanel = ({ isOpen, onClose, onSeen }) => {
 
   const playerFlag = flagFor(country, customFlags, polities);
   const shown = isOpen;
+  const reduceMotion = useHudReducedMotion();
 
-  // Where it rises from and how it goes, as the dock's other windows do
-  // (actions.jsx): up from below the dock, fading in.
+  // Where it stands and how it comes and goes, as the other left-hand panels do
+  // (hudPanel.js): the dock's left edge, just above the dock, up from below the
+  // screen. The phone it is drawn as keeps its own size.
   const rising = {
-    bottom: shown ? "4.25rem" : "-50rem",
+    bottom: HUD_PANEL_BOTTOM,
     color: INK,
     display: "flex",
     fontFamily: "sans-serif",
-    left: "0rem",
-    maxWidth: "calc(100vw - 1rem)",
-    opacity: shown ? 1 : 0,
-    pointerEvents: shown ? "auto" : "none",
+    left: HUD_PANEL_LEFT,
+    maxWidth: HUD_PANEL_WIDTH_CAP,
     position: "fixed",
-    transition: "bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease",
     zIndex: 9998,
+    ...hudPanelMotion(shown, reduceMotion),
   };
   const frameStyle = framed
     ? {
@@ -640,10 +642,11 @@ const SocialPanel = ({ isOpen, onClose, onSeen }) => {
       height: `min(calc(${APP_HEIGHT} - 9rem), max(calc(${APP_HEIGHT} - 16rem), 30rem))`,
       minHeight: "10rem",
       overflow: "hidden",
-      width: isMobile ? "calc(100vw - 1rem)" : "31rem",
+      width: isMobile ? HUD_PANEL_WIDTH_CAP : "31rem",
     };
 
   return (
+    <HudPanelPortal>
     <div role="dialog" aria-label="Rostra" style={frameStyle}>
       {framed && (
         <>
@@ -916,6 +919,7 @@ const SocialPanel = ({ isOpen, onClose, onSeen }) => {
         )}
       </div>
     </div>
+    </HudPanelPortal>
   );
 };
 

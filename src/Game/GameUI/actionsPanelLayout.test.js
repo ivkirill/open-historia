@@ -5,18 +5,13 @@ import fs from "node:fs";
 
 import {
     GOAL_OPEN_KEY,
-    PANEL_HEIGHT_KEY,
     PANEL_HEIGHT_VAR,
     actionsLayoutReducer,
     clampPanelHeight,
     initialActionsLayout,
-    keyedPanelHeight,
     openSectionOf,
-    panelHeightCss,
     readGoalOpen,
-    readPanelHeight,
     writeGoalOpen,
-    writePanelHeight,
 } from "./actionsPanelLayout.js";
 
 const memoryStorage = () => {
@@ -93,20 +88,6 @@ test("the goal card's state is remembered, and blocked storage never breaks the 
     assert.doesNotThrow(() => writeGoalOpen(null, false));
 });
 
-test("the panel's height is remembered, and forgotten for the default", () => {
-    const storage = memoryStorage();
-    assert.equal(readPanelHeight(storage), null);
-    writePanelHeight(storage, 412.6);
-    assert.equal(storage.map.get(PANEL_HEIGHT_KEY), "413");
-    assert.equal(readPanelHeight(storage), 413);
-    writePanelHeight(storage, null);
-    assert.equal(storage.map.has(PANEL_HEIGHT_KEY), false);
-    storage.setItem(PANEL_HEIGHT_KEY, "tall");
-    assert.equal(readPanelHeight(storage), null);
-    assert.equal(readPanelHeight(brokenStorage), null);
-    assert.doesNotThrow(() => writePanelHeight(brokenStorage, 400));
-});
-
 test("the panel is dragged between 20rem and the screen's available height", () => {
     // A 900 px screen at 16 px to the rem: 900 - 9rem = 756 px at most, 320 px at least.
     assert.equal(clampPanelHeight(500, { viewport: 900, rem: 16 }), 500);
@@ -117,49 +98,28 @@ test("the panel is dragged between 20rem and the screen's available height", () 
     assert.equal(clampPanelHeight(-50, { viewport: 100, rem: 16 }), 0);
 });
 
-test("the arrow keys, Home and End move the edge; other keys do not", () => {
-    const screen = { viewport: 900, rem: 16 };
-    assert.equal(keyedPanelHeight("ArrowUp", { current: 500, ...screen }), 516);
-    assert.equal(keyedPanelHeight("ArrowDown", { current: 500, ...screen }), 484);
-    assert.equal(keyedPanelHeight("ArrowUp", { current: 500, shift: true, ...screen }), 564);
-    assert.equal(keyedPanelHeight("ArrowDown", { current: 330, shift: true, ...screen }), 320);
-    assert.equal(keyedPanelHeight("Home", { current: 500, ...screen }), 320);
-    assert.equal(keyedPanelHeight("End", { current: 500, ...screen }), 756);
-    assert.equal(keyedPanelHeight("a", { current: 500, ...screen }), null);
-});
-
-test("the panel's height as CSS: the old rule by default, a dragged height capped by the screen", () => {
-    const app = "var(--oh-app-height, 100vh)";
-    assert.equal(panelHeightCss(null, app), `min(calc(${app} - 9rem), max(calc(${app} - 16rem), 30rem))`);
-    assert.equal(panelHeightCss(480.4, app), `min(calc(${app} - 9rem), max(480px, 20rem))`);
-    assert.equal(panelHeightCss(0, app), panelHeightCss(null, app));
-});
-
 // The panel itself (actions.jsx) is React; these read its source.
 const actionsSource = fs.readFileSync(new URL("./actions.jsx", import.meta.url), "utf8");
 const projectsSource = fs.readFileSync(new URL("./projects.jsx", import.meta.url), "utf8");
 
-test("the panel has a resize handle on its top edge that a mouse, a finger and a keyboard can use", () => {
-    const start = actionsSource.indexOf("const PanelResizeHandle");
-    assert.ok(start > 0, "PanelResizeHandle is defined");
-    const handle = actionsSource.slice(start, actionsSource.indexOf("\nconst ", start + 10));
+test("the panel's height is the shared one, moved by a grip a mouse, a finger and a keyboard can use", () => {
+    const grip = fs.readFileSync(new URL("./panelResizeGrip.jsx", import.meta.url), "utf8");
     for (const needle of [
-        "role=\"separator\"",
-        "aria-label=\"Resize the Actions panel\"",
+        "role={keyed ? \"separator\" : undefined}",
         "cursor: \"ns-resize\"",
         "touchAction: \"none\"",
-        "onPointerDown=",
+        "onPointerDown={handlePointerDown}",
         "setPointerCapture",
         "\"pointercancel\"",
-        "onDoubleClick={() => onCommit(null)}",
-        "onKeyDown=",
-        "top: 0,",
+        "onDoubleClick={() => onCommit(resetPatch)}",
+        "onKeyDown={keyed ? handleKeyDown : undefined}",
     ]) {
-        assert.ok(handle.includes(needle), `the handle has ${needle}`);
+        assert.ok(grip.includes(needle), `the grip has ${needle}`);
     }
-    assert.ok(/tabIndex=\{shown \? 0 : -1\}/.test(handle), "the handle takes the keyboard's focus while the panel is open");
-    assert.ok(actionsSource.includes("<PanelResizeHandle panelRef={panelRef}"), "the panel draws the handle");
-    assert.ok(actionsSource.includes("height: `var(${PANEL_HEIGHT_VAR})`"), "the panel's height is the variable the handle moves");
+    const shell = fs.readFileSync(new URL("./hudPanel.jsx", import.meta.url), "utf8");
+    assert.ok(shell.includes('{grip("y", "Resize the panel\'s height")}'), "every panel's top edge takes the height grip");
+    assert.ok(actionsSource.includes('<HudPanel panel="actions"'), "the Actions panel is the shared shell");
+    assert.ok(actionsSource.includes('[PANEL_HEIGHT_VAR]: "var(--oh-hud-panel-height)"'), "the panel's variable follows the shared height");
     assert.ok(projectsSource.includes(`var(${PANEL_HEIGHT_VAR},`), "the Projects tab sizes its tag menu by the panel's real height");
 });
 

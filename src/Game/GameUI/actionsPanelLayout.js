@@ -11,14 +11,14 @@
 
 // Remembered across openings of the panel, on this device.
 export const GOAL_OPEN_KEY = "oh-actions-goal-open";
+// The Actions panel's height from before every panel shared one: read once and
+// given up (hudPanel.js readHudPanelHeight).
 export const PANEL_HEIGHT_KEY = "oh-actions-panel-height";
 
 // Dragged no shorter than this, and never into the 9rem the top of the screen
 // needs (the panel's own cap since it grew to fill tall screens).
 export const PANEL_MIN_HEIGHT_REM = 20;
 export const PANEL_TOP_CLEARANCE_REM = 9;
-// An arrow key on the focused handle moves it by this much; with Shift, four times.
-export const PANEL_KEY_STEP_PX = 16;
 
 // The CSS variable the panel's height lives in, which the Projects tab reads
 // to size its tag menu (projects.jsx PANEL_HEIGHT).
@@ -71,47 +71,10 @@ export const writeGoalOpen = (storage, open) => {
     } catch { /* private mode or blocked storage: it is only a preference */ }
 };
 
-// The height the player dragged to, in px, or null for the default.
-export const readPanelHeight = (storage) => {
-    try {
-        const saved = Number(storage?.getItem(PANEL_HEIGHT_KEY));
-        return Number.isFinite(saved) && saved > 0 ? Math.round(saved) : null;
-    } catch {
-        return null;
-    }
-};
-
-export const writePanelHeight = (storage, px) => {
-    try {
-        if (px === null || px === undefined) storage?.removeItem(PANEL_HEIGHT_KEY);
-        else storage?.setItem(PANEL_HEIGHT_KEY, String(Math.round(px)));
-    } catch { /* private mode or blocked storage: it is only a preference */ }
-};
-
 // Between the minimum and the screen's available height. A screen too short
 // for the minimum gets what it has.
 export const clampPanelHeight = (px, { viewport, rem = 16 }) => {
     const max = Math.max(0, viewport - PANEL_TOP_CLEARANCE_REM * rem);
     const min = Math.min(PANEL_MIN_HEIGHT_REM * rem, max);
     return Math.round(Math.min(Math.max(Number(px) || 0, min), max));
-};
-
-// The panel's height as CSS. The default grows with a tall screen (never below
-// 30rem); a dragged one is kept, but the screen's own height still caps it, so
-// a rising keyboard or a smaller window never pushes the panel off the top.
-export const panelHeightCss = (px, appHeight) => (
-    Number.isFinite(px) && px > 0
-        ? `min(calc(${appHeight} - ${PANEL_TOP_CLEARANCE_REM}rem), max(${Math.round(px)}px, ${PANEL_MIN_HEIGHT_REM}rem))`
-        : `min(calc(${appHeight} - ${PANEL_TOP_CLEARANCE_REM}rem), max(calc(${appHeight} - 16rem), 30rem))`
-);
-
-// What an arrow key, Home or End does to the height (the handle is on the
-// panel's top edge, so up is taller).
-export const keyedPanelHeight = (key, { current, shift = false, viewport, rem = 16 }) => {
-    const step = PANEL_KEY_STEP_PX * (shift ? 4 : 1);
-    if (key === "ArrowUp") return clampPanelHeight(current + step, { viewport, rem });
-    if (key === "ArrowDown") return clampPanelHeight(current - step, { viewport, rem });
-    if (key === "Home") return clampPanelHeight(0, { viewport, rem });
-    if (key === "End") return clampPanelHeight(Infinity, { viewport, rem });
-    return null;
 };
