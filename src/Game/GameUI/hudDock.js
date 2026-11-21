@@ -17,12 +17,17 @@ import { isFeatureEnabled, useActiveFeatures } from "../../runtime/gameFeatures.
 // The pill itself.
 export const DOCK_BOTTOM_REM = 0.5;
 export const DOCK_LEFT_REM = 0.5;
-export const DOCK_HEIGHT_REM = 4;
-// One launcher, and the gap to the next.
-export const DOCK_BUTTON_REM = 3.3;
-export const DOCK_GAP_REM = 0.75;
-// The pill's own slack around them.
-const DOCK_SLACK_REM = 0.65;
+// One launcher, and the gap to the next. The gap is also the pill's padding, so
+// the space from its edge to a launcher is the space between two launchers.
+export const DOCK_BUTTON_REM = 2.6;
+export const DOCK_GAP_REM = 0.3;
+export const DOCK_PAD_REM = DOCK_GAP_REM;
+// One launcher tall plus the padding above and below. Search and the war room's
+// button are this tall too, so the three share a top edge and a bottom edge.
+export const DOCK_HEIGHT_REM = DOCK_BUTTON_REM + 2 * DOCK_PAD_REM;
+// The launchers' glyphs, one size for all three.
+export const DOCK_ICON_PX = 15;
+const DOCK_SLACK_REM = 2 * DOCK_PAD_REM;
 
 export const DOCK_LAUNCHERS = ["chat", "actions", "social"];
 
@@ -36,7 +41,7 @@ export const dockLaunchers = ({ social = true } = {}) =>
 const tidy = (value) => Math.round(value * 1000) / 1000;
 
 export const dockWidthRem = (buttons = DOCK_LAUNCHERS.length) =>
-    tidy(DOCK_SLACK_REM + buttons * (DOCK_BUTTON_REM + DOCK_GAP_REM));
+    tidy(DOCK_SLACK_REM + buttons * DOCK_BUTTON_REM + (buttons - 1) * DOCK_GAP_REM);
 
 export const DOCK_WIDTH_REM = dockWidthRem();
 export const DOCK_WIDTH = `${DOCK_WIDTH_REM}rem`;
@@ -71,8 +76,3 @@ export const useDockGeometry = () => {
     return { launchers, ...dockGeometry(launchers.length) };
 };
 
-// The bottom edge of the launcher BUTTONS, not of the pill: a smaller control
-// beside them looks deliberate when it lines up with the buttons, and looks
-// like a mistake when it lines up with nothing.
-export const DOCK_BUTTON_BOTTOM_REM = tidy(DOCK_BOTTOM_REM + (DOCK_HEIGHT_REM - DOCK_BUTTON_REM) / 2);
-export const DOCK_BUTTON_BOTTOM = `${DOCK_BUTTON_BOTTOM_REM}rem`;

@@ -19,15 +19,11 @@ import {
   searchLocalPlaces,
   subscribeWorldPlaceIndex,
 } from "../../runtime/placeSearch.js";
-import { DOCK_BOTTOM_REM, DOCK_BUTTON_BOTTOM, DOCK_HEIGHT_REM, DOCK_LEFT_REM, useDockGeometry } from "./hudDock.js";
+import { DOCK_BOTTOM_REM, DOCK_HEIGHT_REM, DOCK_LEFT_REM, useDockGeometry } from "./hudDock.js";
 
-// A small magnifier beside the launcher dock, not a fifth launcher: smaller
-// than the dock's buttons and sitting on the same baseline as their bottoms.
-// Open on a phone it becomes a full-width bar, and a finger needs the extra
-// height there. On any touch screen the magnifier itself is finger-sized too,
-// still smaller than the launchers.
-const COMPACT_SIZE = "2.4rem";
-const TOUCH_SIZE = "2.75rem";
+// The magnifier beside the launcher dock, not a fifth launcher: as tall as the
+// dock, on its bottom edge. Open on a phone it becomes a full-width bar, and a
+// finger needs the extra height there.
 const PHONE_BAR_SIZE = "3rem";
 
 // Photon, not Nominatim: the OSM foundation's Nominatim policy forbids client-side autocomplete outright, and it shows, since it answers "berl" with an office block in Brussels. Photon is the same data, indexed for search as you type.
@@ -365,9 +361,9 @@ const Search = memo(({ mapRef, besideWarRoom = false }) => {
 
   const hasSuggestions = expanded && suggestions.length > 0;
   const phoneBar = expanded && isMobile;
-  const size = phoneBar ? PHONE_BAR_SIZE : isMobile ? "3.2rem" : isTouch ? TOUCH_SIZE : COMPACT_SIZE;
+  const size = phoneBar ? PHONE_BAR_SIZE : `${DOCK_HEIGHT_REM}rem`;
   // Up from the home indicator and in from a notch, with the dock (0 elsewhere).
-  const bottom = `calc(${phoneBar ? `${DOCK_BOTTOM_REM + DOCK_HEIGHT_REM + 0.5}rem` : isMobile ? `${DOCK_BOTTOM_REM + (DOCK_HEIGHT_REM - 3.2) / 2}rem` : DOCK_BUTTON_BOTTOM} + ${SAFE_BOTTOM})`;
+  const bottom = `calc(${phoneBar ? `${DOCK_BOTTOM_REM + DOCK_HEIGHT_REM + 0.5}rem` : `${DOCK_BOTTOM_REM}rem`} + ${SAFE_BOTTOM})`;
 
   return (
     <div

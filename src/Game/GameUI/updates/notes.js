@@ -54,6 +54,30 @@ import { RELEASES } from "./notesReleases.js";
 // make UPDATES, newest first by date.
 const NEW_UPDATES = [
   {
+    // Sent orders: a click on the text opens an editor, the ✕ shows under a pointer that a deletion moved
+    // onto a row (CSS :hover, GameUI/actionItem.css), the list widens by its corner. The date widget writes
+    // the date in the reader's order with the country above it; the Country panel's tabs have drawn icons;
+    // the dock, search and war-room buttons share one height (hudDock.js DOCK_HEIGHT_REM); Exit Game has a
+    // drawn house (the owner, 2026-11-21).
+    id: "2026-11-orders-you-can-edit",
+    kind: "minor",
+    date: "2026-11-21",
+    channel: "beta",
+    banners: [
+      {
+        title: "Edit your orders in place",
+        items: [
+          "Click the text of a sent order to change it. You no longer need to delete it and write it again.",
+          "The delete button appears as soon as the pointer is over an order, even after an order above it was removed.",
+          "The list of your orders can be widened by its corner.",
+          "The date at the top is shorter and written the way your language writes it, such as 13.01.1068, and your country's name sits above it instead of being cut.",
+          "The Country panel's tabs have drawn icons, and their labels no longer run into each other.",
+          "The buttons at the bottom of the screen and the search button are one height and line up along one edge.",
+        ],
+      },
+    ],
+  },
+  {
     // "remove the reccomended thing from command code on the popup when you start a game and dont have a configured key"
     // (the owner, 2026-11-10): GameUI/apiSetupPrompt.jsx ChoiceCard has no recommended badge or highlight.
     id: "2026-11-setup-choices-alike",

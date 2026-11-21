@@ -26,7 +26,7 @@ import { isSeal, newSeal, openExchange, openPoliticalAssessment } from "../../ru
 import { useActiveFeatures } from "../../runtime/gameFeatures.js";
 import { Actions } from "./actions";
 import { Social } from "./social.jsx";
-import { DOCK_BOTTOM_REM, DOCK_GAP_REM, DOCK_HEIGHT_REM, DOCK_LEFT_REM, useDockGeometry } from "./hudDock.js";
+import { DOCK_BOTTOM_REM, DOCK_BUTTON_REM, DOCK_GAP_REM, DOCK_HEIGHT_REM, DOCK_ICON_PX, DOCK_LEFT_REM, DOCK_PAD_REM, useDockGeometry } from "./hudDock.js";
 import { documentsReadableBy, isDocumentExchange } from "../../runtime/reportDelivery.js";
 import { Presence } from "./presence.jsx";
 import StorageProblemNotice from "./storageProblemNotice.jsx";
@@ -5194,7 +5194,7 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
                         // In from a notch and up from the home indicator, as the
                         // dock under it is (0 elsewhere).
                         left: `calc(${FLOATING_UI_EDGE_GAP} + ${SAFE_LEFT})`,
-                        bottom: `calc(4.55rem + ${SAFE_BOTTOM})`,
+                        bottom: `calc(${DOCK_BOTTOM_REM + DOCK_HEIGHT_REM + 0.05}rem + ${SAFE_BOTTOM})`,
                         zIndex: 10050,
                         fontFamily: "sans-serif",
                     }}
@@ -5209,8 +5209,8 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
                                 // at the right: `100vw - 1rem` put it 0.25rem from
                                 // the edge of a phone.
                                 width: `min(22rem, calc(100vw - 1.5rem - ${SAFE_LEFT} - ${SAFE_RIGHT}))`,
-                                // It opens upward from 7.55rem above the bottom (the
-                                // bell's 4.55rem, then 3rem), so on a short screen it
+                                // It opens upward from the bell (the dock's top edge, then 3rem),
+                                // so on a short screen it
                                 // may be the rest of it and no more: `- 7rem` ran it
                                 // 0.55rem off the top whenever the cap bit (a phone
                                 // held sideways, or with its browser bars showing),
@@ -5360,12 +5360,12 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
                 display: "flex",
                 fontFamily: "inherit",
                 fontSize: "1.2rem",
-                height: "3.3rem",
+                height: `${DOCK_BUTTON_REM}rem`,
                 justifyContent: "center",
                 outline: "none",
                 transform: hovered ? "translateY(-1px)" : "translateY(0)",
                 transition: "all 0.12s ease",
-                width: "3.3rem",
+                width: `${DOCK_BUTTON_REM}rem`,
             }}
             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
             onClick={() => setChatOpen(o => !o)}>
@@ -5394,7 +5394,7 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
 
 // Continuance's diplomacy glyph — the launcher icons are one stroke family.
 const DiplomacyDockIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width={DOCK_ICON_PX} height={DOCK_ICON_PX} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
         <path d="M8 9h8" />
         <path d="M8 13h5" />
@@ -5418,7 +5418,7 @@ const Toolbar = memo(({ onOpenAdvisor, activePanel, onTogglePanel, mapRef, actio
     // dark grey under a palette, so the buttons were themed and the tray round
     // them was not (the owner, 2026-11-09).
     return (
-        <div style={{ position: "fixed", bottom: `calc(${DOCK_BOTTOM_REM}rem + ${SAFE_BOTTOM})`, left: `calc(${DOCK_LEFT_REM}rem + ${SAFE_LEFT})`, height: `${DOCK_HEIGHT_REM}rem`, width: dock.width, gap: `${DOCK_GAP_REM}rem`, padding: "0 0.1rem", backgroundColor: "var(--oh-ui-glass-pill, var(--oh-hud-bg))", backdropFilter: "var(--oh-hud-blur)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontFamily: "sans-serif", borderRadius: "14px", border: "1px solid var(--oh-hud-border)", boxShadow: "var(--oh-hud-shadow-soft)" }}>
+        <div style={{ position: "fixed", bottom: `calc(${DOCK_BOTTOM_REM}rem + ${SAFE_BOTTOM})`, left: `calc(${DOCK_LEFT_REM}rem + ${SAFE_LEFT})`, height: `${DOCK_HEIGHT_REM}rem`, width: dock.width, gap: `${DOCK_GAP_REM}rem`, padding: `0 ${DOCK_PAD_REM}rem`, backgroundColor: "var(--oh-ui-glass-pill, var(--oh-hud-bg))", backdropFilter: "var(--oh-hud-blur)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontFamily: "sans-serif", borderRadius: "14px", border: "1px solid var(--oh-hud-border)", boxShadow: "var(--oh-hud-shadow-soft)" }}>
         <Chat hovered={canHover && hoveredChat} setHovered={setHoveredChat} isOpen={activePanel === "chat"} onToggle={() => onTogglePanel("chat")} />
         {/* Projects & Operations is the Actions panel's second tab (actions.jsx);
             the advisor opens it there with actionsTab. */}

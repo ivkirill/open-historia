@@ -1,0 +1,47 @@
+/* A sent action's row. Hover is CSS, not React state: a row that moves under a
+   still pointer (because another row was deleted above it) gets no mouse event,
+   so state-driven hover left the ✕ hidden until the pointer moved away. */
+.oh-action-row {
+  transition: background 0.15s;
+}
+
+.oh-action-row:hover,
+.oh-action-row:focus-within {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.oh-action-text {
+  cursor: text;
+  border-radius: 6px;
+}
+
+.oh-action-text:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.oh-action-delete {
+  color: rgba(239, 68, 68, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.oh-action-row:hover .oh-action-delete,
+.oh-action-row:focus-within .oh-action-delete {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.oh-action-delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.95);
+}
+
+/* No hover on a touch screen: the ✕ is always there, or an order could never be deleted. */
+@media (hover: none) {
+  .oh-action-delete {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

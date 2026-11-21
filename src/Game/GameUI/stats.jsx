@@ -1025,6 +1025,23 @@ const usePartiesCompile = (targetCountry) => {
     return { compile, busy, error, actor: compiled?.country === targetCountry ? compiled.actor : null };
 };
 
+// One stroke family for the four tabs, drawn in the tab's text colour. Emoji
+// were drawn in colour by the platform, at the platform's size, and sat on the
+// label's baseline a different way on each.
+const STATS_TAB_ICON_PX = 13;
+const STATS_TAB_ICON_PATHS = {
+    politics: <path d="M12 3 3 8h18L12 3ZM5 11v7M9.5 11v7M14.5 11v7M19 11v7M3 21h18" />,
+    diplomacy: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 3 2.6 15 0 18M12 3c-2.6 3-2.6 15 0 18" /></>,
+    economy: <><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></>,
+    national: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
+    ranking: <><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" /><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3" /></>,
+};
+const StatsTabIcon = ({ name }) => (
+    <svg width={STATS_TAB_ICON_PX} height={STATS_TAB_ICON_PX} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+        {STATS_TAB_ICON_PATHS[name]}
+    </svg>
+);
+
 // `touch`: a thumb-sized tab. The inline minHeight would beat the tap class.
 const statsSubtabStyle = (selected, touch = false) => ({
     alignItems: "center",
@@ -1038,11 +1055,21 @@ const statsSubtabStyle = (selected, touch = false) => ({
     flex: 1,
     fontSize: "0.68rem",
     fontWeight: selected ? 850 : 680,
+    gap: "0.3rem",
     justifyContent: "center",
+    // Four tabs share one row. A label that does not fit is cut inside its own
+    // tab (statsSubtabLabelStyle), never spilled over the next one.
+    minWidth: 0,
     minHeight: touch ? "3rem" : "2.8rem",
     padding: "0.55rem 0.3rem",
     transition: "background-color 0.15s, border-color 0.15s, color 0.15s",
 });
+const statsSubtabLabelStyle = {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+};
 
 // A statistics sheet on a phone: exactly the screen, clear of the notch and the
 // home indicator. The cards' minimum heights (580 and 520 px) go, as on any
@@ -2471,25 +2498,25 @@ const StatsPaneBody = ({ active, mapRef, requestedTarget = "", onConsumeTarget }
             aria-pressed={statsView === "politics"}
             onClick={() => setStatsView("politics")}
             style={statsSubtabStyle(statsView === "politics", touch)}
-            >🏛 Politics</button>
+            ><StatsTabIcon name="politics" /><span style={statsSubtabLabelStyle}>Politics</span></button>
             <button
             type="button"
             aria-pressed={statsView === "diplomacy"}
             onClick={() => setStatsView("diplomacy")}
             style={statsSubtabStyle(statsView === "diplomacy", touch)}
-            >🤝 Diplomacy</button>
+            ><StatsTabIcon name="diplomacy" /><span style={statsSubtabLabelStyle}>Diplomacy</span></button>
             <button
             type="button"
             aria-pressed={statsView === "economy"}
             onClick={() => setStatsView("economy")}
             style={statsSubtabStyle(statsView === "economy", touch)}
-            >{statSheetDefinition.custom ? "📊 National" : "📈 Economy"}</button>
+            ><StatsTabIcon name={statSheetDefinition.custom ? "national" : "economy"} /><span style={statsSubtabLabelStyle}>{statSheetDefinition.custom ? "National" : "Economy"}</span></button>
             <button
             type="button"
             aria-pressed={statsView === "ranking"}
             onClick={() => setStatsView("ranking")}
             style={statsSubtabStyle(statsView === "ranking", touch)}
-            >🏆 Ranking</button>
+            ><StatsTabIcon name="ranking" /><span style={statsSubtabLabelStyle}>Ranking</span></button>
             </div>
 
             <div className="oh-country-content" data-view={statsView}>

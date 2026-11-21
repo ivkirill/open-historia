@@ -66,7 +66,8 @@ import { useIsMobile } from "../../runtime/useIsMobile.js";
 import { primeRuntimeValue } from "../../runtime/runtimeStore.js";
 import { useRuntimeState } from "../../runtime/useRuntimeState.js";
 import { MAP_SETTING_KEYS, getMapSettingDefaultOn, useMapSetting, useMapSettingValue, useMotionSetting } from "../../runtime/mapSettings.js";
-import { formatGameDateReadable, isGameDate, normalizeGameDate } from "../../runtime/gameDates.js";
+import { formatGameDateCompact, formatGameDateReadable, isGameDate, normalizeGameDate } from "../../runtime/gameDates.js";
+import { getStoredLanguage } from "../../runtime/i18n.js";
 import { jumpDayStep, jumpTargetDate } from "../../runtime/jumpDates.js";
 import {
     MAP_CHANGE_KIND_LABELS,
@@ -259,6 +260,14 @@ const buttonStyle = {
     lineHeight: 1,
     transition: "all 0.15s ease",
     width: "2rem",
+};
+
+// The « and » beside the date on a desktop: as tall as the widget, so each glyph
+// sits on the widget's centre line rather than in a 2rem box above it.
+const arrowStyleDesktop = {
+    fontSize: "1rem",
+    height: "100%",
+    width: "1.7rem",
 };
 
 const formatDate = (value, pattern = "MMM D, YYYY") => {
@@ -2605,11 +2614,6 @@ const DateWidget = ({
     const [undoCount, setUndoCount] = useRestorePointReading(loadRollbackSnapshotCount, 0, [gameData?.round]);
     const openPanel = typeof onSetPanel === "function" ? activePanel : localOpenPanel;
     const isMobile = useIsMobile();
-    // Wherever the « » are finger-sized (a touch screen, a phone either way
-    // up), the country sits over the date: beside it, it was cut to its first
-    // letters.
-    const touch = useTouchPrimary();
-    const stackCountry = isMobile || touch;
     const countryButton = isMobile && typeof onToggleCountry === "function";
     const CountryStack = countryButton ? "button" : "div";
     // The player's switch, or the system's reduced-motion setting.
@@ -3489,7 +3493,7 @@ const DateWidget = ({
     const displayDate = !gameData
     ? "Loading..."
     : hasValidGameDate
-    ? formatGameDateReadable(rawGameDate, isMobile && playerCountry ? "MMM Do, YYYY" : "MMMM Do, YYYY")
+    ? (formatGameDateCompact(rawGameDate, getStoredLanguage()) || formatGameDateReadable(rawGameDate, isMobile && playerCountry ? "MMM Do, YYYY" : "MMMM Do, YYYY"))
     : String(rawGameDate).trim() || "Undated";
     const currentDate = hasValidGameDate
     ? normalizeGameDate(rawGameDate)
@@ -3941,7 +3945,9 @@ const DateWidget = ({
             ...widgetSurface,
             ...dockStyle,
             top: topOffset,
-            height: isMobile ? "3.2rem" : "3.5rem",
+            // As tall as the top bar's session block and Exit Game beside it, so the
+            // three share one centre line.
+            height: isMobile ? "3.2rem" : "2.85rem",
             // The player's country sits beside the date. On phones the standalone
             // pill would cover the date, so stretch the widget; on desktop cap the
             // width so a long fantasy country name ellipsizes instead of sprawling.
@@ -3958,6 +3964,7 @@ const DateWidget = ({
         aria-label="Events"
         style={{
             ...buttonStyle,
+            ...(isMobile ? null : arrowStyleDesktop),
             color: openPanel === "history" ? "var(--oh-ui-glass-active-text, #bfdbfe)" : buttonStyle.color,
         }}
         onClick={() => togglePanel("history")}
@@ -3977,22 +3984,26 @@ const DateWidget = ({
 
         <div style={{ alignItems: "center", display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
         {playerCountry ? (
-            // On a touch screen the country sits over the date: the buttons are
-            // finger-sized, and side by side the name was cut down to its first
-            // few letters.
+            // The country sits over the date on every screen. Side by side, the
+            // name had to share the widget's height with the date and was cut.
             <CountryStack
             {...(countryButton ? { type: "button", onClick: onToggleCountry, "aria-expanded": countryOpen } : null)}
             style={{
-                ...(stackCountry
-                    ? { alignItems: "center", display: "flex", flexDirection: "column", gap: "0.1rem", justifyContent: "center", maxWidth: "100%", minWidth: 0 }
-                    : { alignItems: "baseline", display: "flex", gap: "0.5rem", justifyContent: "center", maxWidth: "100%", minWidth: 0 }),
+                alignItems: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0",
+                justifyContent: "center",
+                lineHeight: 1.15,
+                maxWidth: "100%",
+                minWidth: 0,
                 ...(countryButton ? { background: "none", border: 0, color: "inherit", cursor: "pointer", font: "inherit", padding: 0 } : null),
             }}
             >
             <span
             style={{
                 color: countryButton && countryOpen ? "var(--oh-ui-glass-active-text, #bfdbfe)" : "var(--oh-ui-accent, rgba(147,197,253,0.88))",
-                fontSize: isMobile ? "0.68rem" : "0.8rem",
+                fontSize: isMobile ? "0.68rem" : "0.64rem",
                 fontWeight: 700,
                 letterSpacing: "0.05em",
                 minWidth: 0,
@@ -4001,12 +4012,12 @@ const DateWidget = ({
                 textTransform: "uppercase",
                 whiteSpace: "nowrap",
                 // A column's items are as wide as their text unless told otherwise.
-                ...(stackCountry ? { maxWidth: "100%" } : null),
+                maxWidth: "100%",
             }}
             >
             {playerCountry}
             </span>
-            <span style={{ color: "rgba(255,255,255,0.94)", flexShrink: 0, fontSize: isMobile ? "0.82rem" : "0.95rem", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+            <span style={{ color: "rgba(255,255,255,0.94)", flexShrink: 0, fontSize: isMobile ? "0.82rem" : "0.84rem", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
             {displayDate}
             </span>
             </CountryStack>
@@ -4023,6 +4034,7 @@ const DateWidget = ({
         aria-label="Timeline"
         style={{
             ...buttonStyle,
+            ...(isMobile ? null : arrowStyleDesktop),
             color: openPanel === "skip" ? "#e4e4e7" : buttonStyle.color,
         }}
         onClick={() => {

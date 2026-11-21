@@ -1,6 +1,6 @@
 /*! Open Historia — portions (panel sizing on small screens) © 2026 Nicholas Krol, AGPL-3.0-or-later (see LICENSE). */
 import React from "react";
-import { APP_HEIGHT, APP_HEIGHT_VAR, useCanHover, useTouchPrimary } from "../../runtime/mobileUi.js";
+import { APP_HEIGHT, APP_HEIGHT_VAR, useTouchPrimary } from "../../runtime/mobileUi.js";
 import { isComposerSendKey } from "../../runtime/composerKeys.js";
 import { useIsMobile } from "../../runtime/useIsMobile.js";
 import dayjs from "dayjs";
@@ -26,6 +26,8 @@ import { uiString } from "../../runtime/translator.js";
 import { useFailureReportButton } from "../../runtime/saveDebugLog.js";
 import { queuedActionIds, selectSavedSuggestions, suggestionsFellBack } from "./actionSuggestions.js";
 import { ProjectsBoard, ProjectsTabIcon } from "./projects.jsx";
+import { DOCK_BUTTON_REM, DOCK_ICON_PX } from "./hudDock.js";
+import "./actionItem.css";
 import {
     PANEL_HEIGHT_VAR,
     actionsLayoutReducer,
@@ -77,7 +79,7 @@ const ensureActionsStyles = () => {
 };
 
 const SparkleIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width={DOCK_ICON_PX} height={DOCK_ICON_PX} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M12 2L13.5 9.5L21 11L13.5 12.5L12 20L10.5 12.5L3 11L10.5 9.5L12 2Z" />
     </svg>
 );
@@ -183,12 +185,7 @@ const movesUnit = (action) => Boolean(action?.unitRevert) && (action.status ?? "
 // while a turn runs, because deleting it moves the unit back, and the turn's
 // world write would put the unit where it was. Other orders can: the turn reads
 // the queue again before it writes it.
-const ActionItem = ({ action, onDelete, locked = false }) => {
-    const [hovered, setHovered] = React.useState(false);
-    // The ✕ appears with the pointer over the row. Nothing hovers on a touch
-    // screen, so there it is always shown, or an order could never be deleted.
-    const canHover = useCanHover();
-    const showDelete = hovered || !canHover;
+const ActionItem = ({ action, onDelete, onEdit, locked = false }) => {
     const normalized = normalizeActionEntry(action);
 
     if (!normalized) {
@@ -200,20 +197,18 @@ const ActionItem = ({ action, onDelete, locked = false }) => {
 
     return (
         <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        className="oh-action-row"
         style={{
             alignItems: "center",
-            backgroundColor: hovered ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
             border: "1px solid rgba(255,255,255,0.07)",
             borderRadius: "10px",
+            backgroundColor: "rgba(255,255,255,0.05)",
             color: "rgba(255,255,255,0.85)",
             display: "flex",
             gap: "0.5rem",
             justifyContent: "space-between",
             lineHeight: "1.75",
             padding: "0.55rem 0.85rem",
-            transition: "background 0.15s",
         }}
         >
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -223,7 +218,17 @@ const ActionItem = ({ action, onDelete, locked = false }) => {
             {normalized.title}
             </div>
         )}
-        <div data-no-translate style={{ color: "rgba(255,255,255,0.82)", fontSize: "0.82rem", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+        {/* A click on the text opens the editor. A locked order (a turn is running) is read-only. */}
+        <div
+        data-no-translate
+        className={locked ? undefined : "oh-action-text"}
+        role={locked ? undefined : "button"}
+        tabIndex={locked ? undefined : 0}
+        title={locked ? TURN_RUNNING_NOTE : "Edit this order"}
+        onClick={locked ? undefined : onEdit}
+        onKeyDown={locked ? undefined : (event) => { if (event.key === "Enter") onEdit(); }}
+        style={{ color: "rgba(255,255,255,0.82)", fontSize: "0.82rem", whiteSpace: "pre-wrap", wordBreak: "break-word", cursor: locked ? "default" : undefined }}
+        >
         {label}
         </div>
         <div
@@ -240,30 +245,74 @@ const ActionItem = ({ action, onDelete, locked = false }) => {
         </div>
         <button
         type="button"
-        className="oh-tap"
+        className="oh-tap oh-action-delete"
         onClick={onDelete}
         disabled={locked}
         title={locked ? TURN_RUNNING_NOTE : "Delete action"}
         aria-label="Delete action"
         style={{
             alignItems: "center",
-            background: hovered && !locked ? "rgba(239,68,68,0.1)" : "none",
+            background: "none",
             border: "none",
             borderRadius: "6px",
-            color: locked ? "rgba(255,255,255,0.18)" : hovered ? "rgba(239,68,68,0.95)" : "rgba(239,68,68,0.8)",
+            color: locked ? "rgba(255,255,255,0.18)" : undefined,
             cursor: locked ? "not-allowed" : "pointer",
             display: "flex",
             flexShrink: 0,
             fontSize: "1rem",
             lineHeight: 1,
-            opacity: showDelete ? 1 : 0,
             padding: "0.18rem 0.3rem",
-            pointerEvents: showDelete ? "auto" : "none",
-            transition: "opacity 0.15s, color 0.15s, background 0.15s",
         }}
         >
         {"\u2715"}
         </button>
+        </div>
+    );
+};
+
+// The editor for one sent order: a plain window over the panel, Escape or a click
+// outside it cancels, Save keeps the text the player wrote.
+const ActionEditDialog = ({ initialText, onSave, onClose }) => {
+    const [text, setText] = React.useState(initialText);
+    const trimmed = text.trim();
+
+    React.useEffect(() => {
+        const onKey = (event) => {
+            if (event.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [onClose]);
+
+    return (
+        <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit order"
+        onClick={onClose}
+        style={{ alignItems: "center", background: "rgba(0,0,0,0.55)", display: "flex", inset: 0, justifyContent: "center", padding: "1rem", position: "fixed", zIndex: 1000 }}
+        >
+        <div
+        onClick={(event) => event.stopPropagation()}
+        style={{ background: "#15171c", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px", boxSizing: "border-box", display: "grid", gap: "0.75rem", maxWidth: "520px", padding: "1rem", width: "100%" }}
+        >
+        <textarea
+        autoFocus
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        rows={6}
+        data-no-translate
+        style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", boxSizing: "border-box", color: "white", fontFamily: "sans-serif", fontSize: "0.85rem", lineHeight: 1.5, outline: "none", padding: "0.7rem 0.85rem", resize: "vertical", width: "100%" }}
+        />
+        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+        <button type="button" className="oh-tap" onClick={onClose} style={{ background: "none", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px", color: "rgba(255,255,255,0.85)", cursor: "pointer", padding: "0.45rem 0.9rem" }}>
+        Cancel
+        </button>
+        <button type="button" className="oh-tap" disabled={!trimmed} onClick={() => onSave(trimmed)} style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "8px", color: "#111", cursor: trimmed ? "pointer" : "not-allowed", opacity: trimmed ? 1 : 0.4, padding: "0.45rem 0.9rem" }}>
+        Save
+        </button>
+        </div>
+        </div>
         </div>
     );
 };
@@ -994,6 +1043,18 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
         improveAbortRef.current?.abort(new DOMException("Improve cancelled.", "AbortError"));
     };
 
+    // The order's text is changed in place; its kind, status and any unit move stay as they were.
+    const handleEdit = async (index, nextText) => {
+        const current = actions[index];
+        if (!current || !nextText) return;
+        const edited = { ...current, text: nextText, rawInput: nextText };
+        if (current.title === (current.text || current.rawInput)) edited.title = nextText.length > 64 ? `${nextText.slice(0, 61)}...` : nextText;
+        await persistActions(actions.map((entry, entryIndex) => (entryIndex === index ? edited : entry)), ORDER_NOT_SAVED);
+        logDebugEvent("action", `Order edited: ${nextText.slice(0, 80)}`);
+    };
+
+    const [editingIndex, setEditingIndex] = React.useState(null);
+
     const handleDelete = async (index) => {
         const removed = actions[index];
         if (movesUnit(removed) && isSimulationBusy()) return;
@@ -1310,15 +1371,22 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
                     Your Submitted Actions
                     </p>
                 )}
+                {editingIndex !== null && actions[editingIndex] && (
+                    <ActionEditDialog
+                    initialText={normalizeActionEntry(actions[editingIndex])?.rawInput || normalizeActionEntry(actions[editingIndex])?.text || ""}
+                    onSave={(nextText) => { setEditingIndex(null); handleEdit(editingIndex, nextText); }}
+                    onClose={() => setEditingIndex(null)}
+                    />
+                )}
                 {submittedOpen && (
-                    <div style={listStyle}>
+                    <div style={{ ...listStyle, resize: "horizontal", overflow: "auto", maxWidth: "100%" }}>
                     {submittedActions.length === 0 && (
                         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.8rem", fontStyle: "italic", margin: 0 }}>
                         No actions submitted yet.
                         </p>
                     )}
                     {submittedActions.map(({ normalized, originalIndex }) => (
-                        <ActionItem key={normalized.id || originalIndex} action={normalized} locked={turnRunning && movesUnit(normalized)} onDelete={() => handleDelete(originalIndex)} />
+                        <ActionItem key={normalized.id || originalIndex} action={normalized} locked={turnRunning && movesUnit(normalized)} onDelete={() => handleDelete(originalIndex)} onEdit={() => setEditingIndex(originalIndex)} />
                     ))}
                     </div>
                 )}
@@ -1346,7 +1414,7 @@ const ActionsPanel = ({ isOpen, onClose, onOpenAdvisor, mapRef, requestedTab = n
 
         <div
         style={{
-            alignItems: "center",
+            alignItems: "flex-end",
             backgroundColor: "rgba(0,0,0,0.2)",
             borderTop: "1px solid rgba(255,255,255,0.07)",
             display: "flex",
@@ -1497,12 +1565,12 @@ const Actions = ({ onOpenAdvisor, mapRef, requestedTab = null, hovered, setHover
             display: "flex",
             fontFamily: "inherit",
             fontSize: "1.2rem",
-            height: "3.3rem",
+            height: `${DOCK_BUTTON_REM}rem`,
             justifyContent: "center",
             outline: "none",
             transform: hovered ? "translateY(-1px)" : "translateY(0)",
             transition: "all 0.12s ease",
-            width: "3.3rem",
+            width: `${DOCK_BUTTON_REM}rem`,
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}

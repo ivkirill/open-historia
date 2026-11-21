@@ -105,6 +105,15 @@ import {
 } from "./ScenarioSuggestions.jsx";
 import { CommunitySkeleton, MenuCardSkeletons } from "./menuSkeleton.jsx";
 
+// A drawn house, not the ⌂ character: the font draws that glyph at different
+// sizes and weights from one platform to the next.
+const HomeGlyph = () => (
+  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-1px" }}>
+    <path d="M3 11.5 12 4l9 7.5" />
+    <path d="M5.5 10v10h13V10" />
+  </svg>
+);
+
 const UNIT_TYPE_LABELS = {
   infantry: "Infantry",
   armor: "Armor",
@@ -4746,7 +4755,7 @@ const LibraryTopBar = ({ onOpenSettings }) => {
               padding: "0 0.85rem",
             }}
           >
-            ⌂ Exit Game
+            <HomeGlyph /> Exit Game
           </button>
         </div>
       )}
@@ -4775,7 +4784,7 @@ const LibraryTopBar = ({ onOpenSettings }) => {
             type="button"
             style={touchFit({ ...actionButtonStyle, ...surfaceStyle, borderRadius: "12px", fontSize: "1rem", height: "3.2rem", minHeight: "0", minWidth: "0", padding: 0, width: "3.2rem" }, touch, { icon: true })}
           >
-            ⌂
+            <HomeGlyph />
           </button>
         </div>
       )}

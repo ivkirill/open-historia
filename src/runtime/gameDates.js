@@ -164,6 +164,17 @@ const ordinal = (n) => {
 // A readable date from a dayjs-style pattern: YYYY (the year, "218 BC" before
 // AD 1), MMMM, MMM, MM, M, DD, Do, D. Any other character is copied through.
 // "" when the value is not a game date, so callers can fall back.
+// The numeric date in the order the language writes it: 13.01.1068 for Russian,
+// 01/13/1068 for English. Before the common era the readable form stays, because
+// a numeric year with a sign reads as a typo.
+export const formatGameDateCompact = (value, locale = "en") => {
+  const parts = parseGameDate(value);
+  if (!parts || parts.year < 0) return "";
+  const date = new Date(0);
+  date.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+  return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(date);
+};
+
 export const formatGameDateReadable = (value, pattern = "D MMMM YYYY") => {
   const parts = parseGameDate(value);
   if (!parts) return "";

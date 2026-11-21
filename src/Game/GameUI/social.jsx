@@ -28,6 +28,7 @@ import { getNationFlags } from "../../runtime/assets.js";
 import { isComposerSendKey } from "../../runtime/composerKeys.js";
 import { bundledFlagUrl, flagImageUrlFromGid } from "../../runtime/countryFlags.js";
 import { formatGameDateReadable } from "../../runtime/gameDates.js";
+import { DOCK_BUTTON_REM, DOCK_ICON_PX } from "./hudDock.js";
 import { mutateWorldState } from "../../runtime/gameState.js";
 import { getLibraryState } from "../../runtime/library.js";
 import { logDebugEvent } from "../../runtime/debugLog.js";
@@ -97,7 +98,7 @@ const stroke = { fill: "none", stroke: "currentColor", strokeLinecap: "round", s
 
 // A modern smartphone.
 const RostraDockIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" strokeWidth="1.9" {...stroke}>
+  <svg width={DOCK_ICON_PX} height={DOCK_ICON_PX} viewBox="0 0 24 24" strokeWidth="1.9" {...stroke}>
     <rect x="5.5" y="2" width="13" height="20" rx="3" />
     <path d="M10.5 5h3" />
     <path d="M9.5 19h5" />
@@ -1001,12 +1002,12 @@ const Social = ({ hovered, isOpen, onToggle, setHovered }) => {
           display: "flex",
           fontFamily: "inherit",
           fontSize: "1.2rem",
-          height: "3.3rem",
+          height: `${DOCK_BUTTON_REM}rem`,
           justifyContent: "center",
           outline: "none",
           transform: hovered ? "translateY(-1px)" : "translateY(0)",
           transition: "all 0.12s ease",
-          width: "3.3rem",
+          width: `${DOCK_BUTTON_REM}rem`,
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
