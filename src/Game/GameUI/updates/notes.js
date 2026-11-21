@@ -57,19 +57,23 @@ const NEW_UPDATES = [
     // "все окна стоят в разных местах, в разно бой и с разными состояниями. Давай проанализируем как их можно
     // оптимизировать и стандартизировать" (the owner, 2026-11-21): one shell for the left-hand panels
     // (GameUI/hudPanel.js, hudPanel.jsx), drawn in a layer of their own above the dock; one height shared,
-    // a width each; the dense dark surface; one tab strip and close button; Rostra keeps its phone.
+    // a width each; the dense dark surface; one tab strip and close button; Rostra keeps its phone. The bell's
+    // count on the launchers (dockBadge.jsx), the flag and advisor in a tray (main.jsx RightDock), Exit Game in
+    // the ⋮ menu (settings.jsx ExitGameButton).
     id: "2026-11-panels-in-one-place",
     kind: "minor",
     date: "2026-11-21",
     channel: "beta",
     banners: [
       {
-        title: "The side panels open in one place",
+        title: "A tidier game screen",
         items: [
           "Actions, Diplomacy, Events and Timeline open in the same place above the buttons at the bottom left, with the same frame and the same dark background.",
-          "They share one height: make one taller and the others follow. Each keeps the width you give it.",
-          "Diplomacy and Timeline can now be resized by their edges too.",
+          "They share one height: make one taller and the others follow. Each keeps the width you give it, and Diplomacy and Timeline can now be resized too.",
           "Rostra opens in the same place, still drawn as a phone.",
+          "New diplomatic messages and new Rostra posts are counted on their buttons. The separate bell is gone; its sound and desktop switches are in the Diplomacy panel.",
+          "The country flag and the advisor on the right sit in a tray like the buttons at the bottom left.",
+          "Exit Game is in the menu now, at the top of every tab.",
         ],
       },
     ],

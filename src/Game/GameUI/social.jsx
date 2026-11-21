@@ -31,6 +31,7 @@ import { formatGameDateReadable } from "../../runtime/gameDates.js";
 import { DOCK_BUTTON_REM, DOCK_ICON_PX } from "./hudDock.js";
 import { HUD_PANEL_BOTTOM, HUD_PANEL_LEFT, HUD_PANEL_WIDTH_CAP, hudPanelMotion } from "./hudPanel.js";
 import { HudPanelPortal, useHudReducedMotion } from "./hudPanel.jsx";
+import { DockBadge } from "./dockBadge.jsx";
 import { mutateWorldState } from "../../runtime/gameState.js";
 import { getLibraryState } from "../../runtime/library.js";
 import { logDebugEvent } from "../../runtime/debugLog.js";
@@ -1019,11 +1020,7 @@ const Social = ({ hovered, isOpen, onToggle, setHovered }) => {
       >
         <span style={{ display: "inline-flex", position: "relative" }}>
           <RostraDockIcon />
-          {unseen > 0 && (
-            <span data-no-translate style={{ alignItems: "center", background: ACCENT, border: "1px solid rgba(255,255,255,0.35)", borderRadius: "999px", boxShadow: "0 1px 4px rgba(0,0,0,0.5)", color: "#06171d", display: "flex", fontSize: "0.62rem", fontWeight: 800, height: "1.05rem", justifyContent: "center", lineHeight: 1, minWidth: "1.05rem", padding: "0 0.2rem", position: "absolute", right: "-0.8rem", top: "-0.55rem" }}>
-              {unseen > 9 ? "9+" : unseen}
-            </span>
-          )}
+          <DockBadge count={unseen} />
         </span>
       </button>
     </>

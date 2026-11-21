@@ -105,15 +105,6 @@ import {
 } from "./ScenarioSuggestions.jsx";
 import { CommunitySkeleton, MenuCardSkeletons } from "./menuSkeleton.jsx";
 
-// A drawn house, not the ⌂ character: the font draws that glyph at different
-// sizes and weights from one platform to the next.
-const HomeGlyph = () => (
-  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-1px" }}>
-    <path d="M3 11.5 12 4l9 7.5" />
-    <path d="M5.5 10v10h13V10" />
-  </svg>
-);
-
 const UNIT_TYPE_LABELS = {
   infantry: "Infantry",
   armor: "Armor",
@@ -154,6 +145,13 @@ const gameShelfMemory = { search: "", sort: "recent", view: "active" };
 let _openLibraryTab = null;
 export const openLibraryTab = (tab) => {
   _openLibraryTab?.(tab);
+};
+
+// Set by the mounted LibraryTopBar; the in-game menu's Exit Game (settings.jsx
+// SettingsMenu) leaves the game through it.
+let _exitToMainMenu = null;
+export const exitToMainMenu = () => {
+  _exitToMainMenu?.();
 };
 
 // Whether the main menu is showing. Lives at module scope because the whole UI
@@ -2726,6 +2724,7 @@ const LibraryTopBar = ({ onOpenSettings }) => {
     setMenuOverGame(true);
     setMenuOpen(true);
   };
+  _exitToMainMenu = exitToMenu;
   // The menu closes over the game that is ALREADY the active one, with the
   // library opening nothing: a phone's Back over a game the menu was opened
   // from. At startup that game is not loaded (runtime/gameEntry.js), and nothing else here would load it: every
@@ -4700,7 +4699,8 @@ const LibraryTopBar = ({ onOpenSettings }) => {
     <>
       {/* In-game the full-width top bar is gone — the map gets the space. What
           remains is a compact floating cluster beside the ⋮ settings button: a
-          small sleek pill with the session summary, plus Exit Game.
+          small sleek pill with the session summary. Exit Game is in the menu
+          the ⋮ opens (settings.jsx SettingsMenu).
           Below the settings menu and date widget (z 9998/9999) so opening
           either covers it instead of the other way around, and below the
           desktop advisor drawer (9997) so a wide drawer covers it too. */}
@@ -4740,52 +4740,6 @@ const LibraryTopBar = ({ onOpenSettings }) => {
               <div style={{ color: "rgba(226,226,229,0.42)", fontSize: "0.6rem", marginTop: "0.12rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{summaryText}</div>
             </div>
           </div>
-          <button
-            onClick={exitToMenu}
-            title="Leave this game and return to the main menu"
-            type="button"
-            style={{
-              ...actionButtonStyle,
-              ...surfaceStyle,
-              borderRadius: "12px",
-              boxSizing: "border-box",
-              fontSize: "0.68rem",
-              height: "2.85rem",
-              minHeight: "2.85rem",
-              padding: "0 0.85rem",
-            }}
-          >
-            <HomeGlyph /> Exit Game
-          </button>
-        </div>
-      )}
-
-      {/* Phones: the date widget spans the whole top row, so Exit Game sits
-          in the left gutter under the ⋮ settings button instead, clear of the
-          status bar and of a notch at the side. */}
-      {!menuOpen && isMobile && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            fontFamily: "sans-serif",
-            gap: "0.45rem",
-            left: `calc(0.5rem + ${SAFE_LEFT})`,
-            position: "fixed",
-            top: `calc(4rem + ${SAFE_TOP})`,
-            zIndex: 9997,
-          }}
-        >
-          <button
-            aria-label="Exit to the main menu"
-            className="oh-tap"
-            onClick={exitToMenu}
-            title="Leave this game and return to the main menu"
-            type="button"
-            style={touchFit({ ...actionButtonStyle, ...surfaceStyle, borderRadius: "12px", fontSize: "1rem", height: "3.2rem", minHeight: "0", minWidth: "0", padding: 0, width: "3.2rem" }, touch, { icon: true })}
-          >
-            <HomeGlyph />
-          </button>
         </div>
       )}
 

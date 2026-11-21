@@ -3,7 +3,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo
 import { GenerationRatingToast } from "./generationRatingToast.jsx";
 import { SettingsButton, SettingsMenu } from "./settings";
 import { Presence } from "./presence.jsx";
-import { LibraryTopBar, TOP_BAR_OFFSET, openLibraryTab, useMainMenuOpen } from "./libraryBar";
+import { LibraryTopBar, TOP_BAR_OFFSET, exitToMainMenu, openLibraryTab, useMainMenuOpen } from "./libraryBar";
 import { ApiSetupPrompt } from "./apiSetupPrompt.jsx";
 import { GameLoadingScreen, LOADING_CEILING_MS, useGameLoading } from "./gameLoadingScreen.jsx";
 import { setOpenGameCountry, useLibraryState } from "../../runtime/library.js";
@@ -30,7 +30,7 @@ import { ADVISOR_SLIDE } from "./advisorSlide.js";
 import { useIsMobile } from "../../runtime/useIsMobile.js";
 import { useBackToClose } from "../../runtime/backToClose.js";
 import { MAP_CARD_OPENED, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT } from "../../runtime/mobileUi.js";
-import { DOCK_BOTTOM_REM, DOCK_HEIGHT_REM, DOCK_LEFT_REM, WAR_ROOM_BUTTON_REM, useDockGeometry } from "./hudDock.js";
+import { DOCK_BOTTOM_REM, DOCK_BUTTON_REM, DOCK_GAP_REM, DOCK_HEIGHT_REM, DOCK_ICON_PX, DOCK_LEFT_REM, DOCK_PAD_REM, WAR_ROOM_BUTTON_REM, useDockGeometry } from "./hudDock.js";
 import { HudPanelLayer } from "./hudPanel.jsx";
 import { showEveryTroop } from "../Map/troopDetail.js";
 import { dismissRegionPopup } from "../Selection/Regions.jsx";
@@ -216,13 +216,14 @@ const WebGLWarningPopup = () => (
 
 // Continuance's advisor glyph, drawn like the other HUD icons.
 const AdvisorDockIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width={DOCK_ICON_PX} height={DOCK_ICON_PX} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" />
     <path d="M4.5 21c.8-4.2 3.3-6.3 7.5-6.3s6.7 2.1 7.5 6.3" />
   </svg>
 );
 
-const AdvisorButton = ({ isAdvisorOpen, isMobile, dockStyle, onToggle }) => (
+// A button of the right-hand tray, as the launchers are of the dock on the left.
+const AdvisorButton = ({ isAdvisorOpen, onToggle }) => (
   <button
     type="button"
     title="Advisor"
@@ -230,27 +231,54 @@ const AdvisorButton = ({ isAdvisorOpen, isMobile, dockStyle, onToggle }) => (
     data-oh-theme-hud=""
     onClick={onToggle}
     style={{
-      ...baseStyle,
-      ...dockStyle,
-      // Above the map switch at the foot of the stack (MapModeSelector.jsx).
-      bottom: `calc(${isMobile ? "3.6rem" : "3rem"} + ${SAFE_BOTTOM})`,
-      // Rides beside the advisor drawer, so a wide drawer carries it over the
-      // Actions/Projects/chat panels (9998); an open panel stays on top.
-      zIndex: 9997,
-      height: isMobile ? "3.2rem" : "4rem",
-      width: isMobile ? "3.2rem" : "4rem",
-      cursor: "pointer",
-      fontSize: isMobile ? "1.25rem" : "1.5rem",
-      borderRadius: isMobile ? "12px" : "14px",
+      alignItems: "center",
       background: isAdvisorOpen
-        ? "var(--oh-ui-glass-active, rgba(255,255,255,0.085))"
-        : "var(--oh-ui-glass-pill, rgba(35,35,39,0.53))",
-      borderColor: isAdvisorOpen ? "var(--oh-ui-glass-active-line, var(--oh-hud-border))" : "var(--oh-hud-border)",
-      transition: `${dockStyle.transition}, background 0.15s ease`,
+        ? "var(--oh-ui-glass-active, rgba(59,130,246,0.16))"
+        : "var(--oh-ui-glass-chip, rgba(255,255,255,0.04))",
+      border: "1px solid var(--oh-ui-glass-line, rgba(255,255,255,0.1))",
+      borderColor: isAdvisorOpen ? "var(--oh-ui-glass-active-line, rgba(96,165,250,0.34))" : "var(--oh-ui-glass-line, rgba(255,255,255,0.1))",
+      borderRadius: "10px",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+      color: "white",
+      cursor: "pointer",
+      display: "flex",
+      height: `${DOCK_BUTTON_REM}rem`,
+      justifyContent: "center",
+      transition: "background 0.15s ease",
+      width: `${DOCK_BUTTON_REM}rem`,
     }}
   >
     <AdvisorDockIcon />
   </button>
+);
+
+// The country's flag and the advisor in a tray of their own, built as the
+// launcher dock on the left is (chat.jsx Toolbar): "кнопки привести к тому же
+// стандарту что и HUD в левом нижнем углу" (the owner, 2026-11-21). It rides
+// beside the advisor drawer (dockStyle), above the map switch, under an open
+// left-hand panel (9998).
+const RightDock = ({ dockStyle, isMobile, children }) => (
+  <div
+    data-oh-right-dock=""
+    style={{
+      ...dockStyle,
+      alignItems: "center",
+      backdropFilter: "var(--oh-hud-blur)",
+      backgroundColor: "var(--oh-ui-glass-pill, var(--oh-hud-bg))",
+      border: "1px solid var(--oh-hud-border)",
+      borderRadius: "14px",
+      bottom: `calc(${isMobile ? "3.6rem" : "3rem"} + ${SAFE_BOTTOM})`,
+      boxShadow: "var(--oh-hud-shadow-soft)",
+      display: "flex",
+      flexDirection: "column",
+      gap: `${DOCK_GAP_REM}rem`,
+      padding: `${DOCK_PAD_REM}rem`,
+      position: "fixed",
+      zIndex: 9997,
+    }}
+  >
+    {children}
+  </div>
 );
 
 // The war room's button: a disc of red metal brushed in circles
@@ -837,11 +865,6 @@ const Main = ({
               actionsTab={actionsTab}
             />
             <MapModeSelector dockStyle={advisorDockStyle} />
-            <Other
-              dockStyle={advisorDockStyle}
-              active={isCountryOpen}
-              onToggle={toggleCountry}
-            />
             <Search mapRef={mapRef} besideWarRoom={hasFronts} />
             <ForcesPanel
               mapRef={mapRef}
@@ -849,16 +872,17 @@ const Main = ({
               open={isForcesOpen}
               onToggle={() => setIsForcesOpen((v) => !v)}
             />
-            <AdvisorButton
-              isAdvisorOpen={isAdvisorOpen}
-              isMobile={isMobile}
-              dockStyle={advisorDockStyle}
-              onToggle={() => {
-                setIsWarRoomOpen(false);
-                setIsCountryOpen(false);
-                setIsAdvisorOpen((open) => !open);
-              }}
-            />
+            <RightDock dockStyle={advisorDockStyle} isMobile={isMobile}>
+              <Other active={isCountryOpen} onToggle={toggleCountry} />
+              <AdvisorButton
+                isAdvisorOpen={isAdvisorOpen}
+                onToggle={() => {
+                  setIsWarRoomOpen(false);
+                  setIsCountryOpen(false);
+                  setIsAdvisorOpen((open) => !open);
+                }}
+              />
+            </RightDock>
           </>
         )}
         </HudPanelLayer>
@@ -983,6 +1007,7 @@ const Main = ({
             setIsSettingsOpen(false);
           }}
           onOpenGameManagement={() => openLibraryTab("games")}
+          onExitGame={gameEntered ? exitToMainMenu : undefined}
           onOpenEvents={() => setActiveBottomPanel("history")}
           onOpenCheats={() => {
             setShouldLoadCheats(true);

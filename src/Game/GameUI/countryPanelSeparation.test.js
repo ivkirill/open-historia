@@ -21,8 +21,10 @@ test("standalone player flag opens an independent country drawer", () => {
   assert.match(main, /isCountryOpen/);
   assert.match(main, /LazyCountryPanel/);
   assert.match(main, /setIsAdvisorOpen\(false\);\s*setIsCountryOpen/);
-  assert.match(other, /height: "4rem"/);
-  assert.match(other, /width: "4rem"/);
+  // A button of the right-hand tray, the size of the dock's launchers (main.jsx RightDock).
+  assert.match(other, /height: `\$\{DOCK_BUTTON_REM\}rem`/);
+  assert.match(other, /width: `\$\{DOCK_BUTTON_REM\}rem`/);
+  assert.match(main, /<RightDock dockStyle=\{advisorDockStyle\} isMobile=\{isMobile\}>\s*<Other /);
   assert.match(other, /Open .* country panel/);
   assert.match(panel, /<StatsPane active=\{open\}/);
   assert.match(panel, />Country</);

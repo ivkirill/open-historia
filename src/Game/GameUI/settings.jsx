@@ -3295,14 +3295,56 @@ const QuickMenuTabButton = ({ label, selected, onClick, fill = false }) => (
     </button>
 );
 
-const QuickMenuPanel = ({ title, description, children }) => (
+// `action`: a control at the right of the section's title (Exit Game, in a game).
+const QuickMenuPanel = ({ title, description, action = null, children }) => (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div>
-            <div style={{ color: "#f8fafc", fontSize: "0.82rem", fontWeight: 850 }}>{title}</div>
-            {description && <div style={{ color: "rgba(255,255,255,0.36)", fontSize: "0.64rem", lineHeight: 1.45, marginTop: "0.18rem" }}>{description}</div>}
+        <div style={{ alignItems: "flex-start", display: "flex", gap: "0.75rem", justifyContent: "space-between" }}>
+            <div style={{ minWidth: 0 }}>
+                <div style={{ color: "#f8fafc", fontSize: "0.82rem", fontWeight: 850 }}>{title}</div>
+                {description && <div style={{ color: "rgba(255,255,255,0.36)", fontSize: "0.64rem", lineHeight: 1.45, marginTop: "0.18rem" }}>{description}</div>}
+            </div>
+            {action}
         </div>
         {children}
     </div>
+);
+
+// A drawn house, not the ⌂ character: the font draws that glyph at different
+// sizes and weights from one platform to the next.
+const HomeGlyph = () => (
+  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-1px" }}>
+    <path d="M3 11.5 12 4l9 7.5" />
+    <path d="M5.5 10v10h13V10" />
+  </svg>
+);
+
+// Out of the game to the main menu: "кнопку выхода из игры перенести в главное
+// меню" (the owner, 2026-11-21). It stood on the top bar beside the session pill.
+const ExitGameButton = ({ onClick }) => (
+    <button
+    type="button"
+    className="oh-tap"
+    onClick={onClick}
+    title="Leave this game and return to the main menu"
+    style={{
+        alignItems: "center",
+        background: "rgba(220,38,38,0.16)",
+        border: "1px solid rgba(248,113,113,0.42)",
+        borderRadius: "10px",
+        color: "#fecaca",
+        cursor: "pointer",
+        display: "flex",
+        flexShrink: 0,
+        fontFamily: "sans-serif",
+        fontSize: "0.72rem",
+        fontWeight: 800,
+        gap: "0.4rem",
+        padding: "0.5rem 0.85rem",
+        whiteSpace: "nowrap",
+    }}
+    >
+    <HomeGlyph /> Exit Game
+    </button>
 );
 
 const ContextSummaryCard = ({ context }) => {
@@ -3339,6 +3381,7 @@ const SettingsMenu = ({
     onOpenDebugConsole,
     onOpenEvents,
     onOpenGameManagement,
+    onExitGame,
     onClose,
     discordUrl,
     redditUrl,
@@ -3511,10 +3554,12 @@ const SettingsMenu = ({
     }
 
     const grid = { display: "grid", gap: "0.55rem", gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))" };
+    // In a game only, and in the same place on every tab.
+    const exitAction = typeof onExitGame === "function" ? <ExitGameButton onClick={() => runAndClose(onExitGame)} /> : null;
     let panelContent = null;
     if (activeQuickTab === "game") {
         panelContent = (
-            <QuickMenuPanel title="Game" description="Campaign identity and management actions.">
+            <QuickMenuPanel title="Game" description="Campaign identity and management actions." action={exitAction}>
                 <ContextSummaryCard context={context} />
                 {typeof onOpenGameManagement === "function" && (
                     <QuickAction title="Game Management" description="Switch, duplicate, import or manage campaigns" symbol="▦" onClick={() => runAndClose(onOpenGameManagement)} />
@@ -3523,7 +3568,7 @@ const SettingsMenu = ({
         );
     } else if (activeQuickTab === "settings") {
         panelContent = (
-            <QuickMenuPanel title="Settings" description="Jump straight into the options category you want.">
+            <QuickMenuPanel title="Settings" description="Jump straight into the options category you want." action={exitAction}>
                 <div style={grid}>
                     <QuickAction title="General" description="Language, display, accessibility, sound and privacy" symbol="◫" onClick={() => openSettingsSection("general")} />
                     <QuickAction title="Sound" description="The game's music and sound effects." symbol="♫" onClick={() => openSettingsSection("sound")} />
@@ -3535,7 +3580,7 @@ const SettingsMenu = ({
         );
     } else if (activeQuickTab === "help") {
         panelContent = (
-            <QuickMenuPanel title="Help" description="Guides, bug reporting and community links.">
+            <QuickMenuPanel title="Help" description="Guides, bug reporting and community links." action={exitAction}>
                 <div style={grid}>
                     <QuickAction title="Wiki" description="How-to pages and setup help" symbol="?" href="/wiki/" />
                     <QuickAction
@@ -3556,7 +3601,7 @@ const SettingsMenu = ({
         );
     } else {
         panelContent = (
-            <QuickMenuPanel title="Tools" description="High-frequency in-game tools should stay one click away.">
+            <QuickMenuPanel title="Tools" description="High-frequency in-game tools should stay one click away." action={exitAction}>
                 <div style={grid}>
                     {typeof onOpenCheats === "function" && (
                         <QuickAction title="Cheats" description="Game master tools and world editing" symbol="⌁" tone="slate" onClick={() => runAndClose(onOpenCheats)} />

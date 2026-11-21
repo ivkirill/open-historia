@@ -3,26 +3,12 @@ import React, { memo, useEffect, useState } from "react";
 import { JSON_URLS, getNationFlags } from "../../runtime/assets.js";
 import { isPolityLandless, readWorldState } from "../../runtime/gameState.js";
 import { useIsMobile } from "../../runtime/useIsMobile.js";
-import { SAFE_BOTTOM } from "../../runtime/mobileUi.js";
+import { DOCK_BUTTON_REM } from "./hudDock.js";
 import { useCountryDisplayName } from "../../runtime/polityNames.js";
 import { bundledFlagUrl, flagEmojiFromGid, flagImageUrlFromGid } from "../../runtime/countryFlags.js";
 import { resolveChosenPolityFlag, resolvePolityFlag } from "../../runtime/polityFlags.js";
 import { useLibraryState } from "../../runtime/library.js";
 
-const baseStyle = {
-    position: "fixed",
-    backgroundColor: "var(--oh-hud-bg)",
-    backdropFilter: "var(--oh-hud-blur)",
-    zIndex: 9999,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-    fontFamily: "sans-serif",
-    borderRadius: "14px",
-    border: "1px solid var(--oh-hud-border)",
-    boxShadow: "var(--oh-hud-shadow-soft)",
-};
 
 // A GID_0 that isn't a real ISO country (custom scenario polities like "HRE",
 // "YUAN") has no flag — flagImageUrlFromGid/flagEmojiFromGid both return null
@@ -50,10 +36,9 @@ const FallbackBadge = ({ label }) => (
     </div>
 );
 
-// dockStyle places the standalone badge beside the advisor drawer (main.jsx).
-const DEFAULT_DOCK_STYLE = { right: "0.5rem" };
-
-const Other = memo(function Other({ dockStyle = DEFAULT_DOCK_STYLE, active = false, onToggle = null }) {
+// A button of the right-hand tray (main.jsx RightDock), as the launchers are
+// buttons of the dock on the left: the same size, corners and colours.
+const Other = memo(function Other({ active = false, onToggle = null }) {
     const { activeGame } = useLibraryState();
     const activeGameId = String(activeGame?.id || "");
     const activeGameCountry = String(activeGame?.country || "").trim();
@@ -167,25 +152,25 @@ const Other = memo(function Other({ dockStyle = DEFAULT_DOCK_STYLE, active = fal
         data-oh-theme-hud=""
         onClick={onToggle}
         style={{
-            ...baseStyle,
-            ...dockStyle,
-            // Above the advisor's button, which stands above the map switch.
-            bottom: `calc(7.25rem + ${SAFE_BOTTOM})`,
-            // Rides beside the advisor drawer, so a wide drawer carries it over
-            // the Actions/Projects/chat panels (9998); an open panel stays on top.
-            zIndex: 9997,
-            height: "4rem",
-            width: "4rem",
-            padding: "0.48rem",
-            boxSizing: "border-box",
-            overflow: "hidden",
-            cursor: "pointer",
+            alignItems: "center",
             appearance: "none",
             background: active
-                ? "var(--oh-ui-glass-active, rgba(75,143,251,0.17))"
-                : "var(--oh-ui-glass-pill, rgba(35,35,39,0.53))",
-            borderColor: active ? "var(--oh-ui-glass-active-line, var(--oh-hud-border))" : "var(--oh-hud-border)",
-            transition: `${dockStyle.transition || ""}${dockStyle.transition ? ", " : ""}background 0.15s ease`,
+                ? "var(--oh-ui-glass-active, rgba(59,130,246,0.16))"
+                : "var(--oh-ui-glass-chip, rgba(255,255,255,0.04))",
+            border: "1px solid var(--oh-ui-glass-line, rgba(255,255,255,0.1))",
+            borderColor: active ? "var(--oh-ui-glass-active-line, rgba(96,165,250,0.34))" : "var(--oh-ui-glass-line, rgba(255,255,255,0.1))",
+            borderRadius: "10px",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+            boxSizing: "border-box",
+            color: "white",
+            cursor: "pointer",
+            display: "flex",
+            height: `${DOCK_BUTTON_REM}rem`,
+            justifyContent: "center",
+            overflow: "hidden",
+            padding: "0.3rem",
+            transition: "background 0.15s ease",
+            width: `${DOCK_BUTTON_REM}rem`,
         }}
         >
         {flagUrl && !imageFailed ? (
@@ -196,7 +181,7 @@ const Other = memo(function Other({ dockStyle = DEFAULT_DOCK_STYLE, active = fal
             style={{ borderRadius: "5px", boxShadow: "0 0 0 1px rgba(255,255,255,0.16)", height: "100%", objectFit: "cover", width: "100%" }}
             />
         ) : flagEmoji ? (
-            <span style={{ fontSize: "1.35rem", lineHeight: 1 }}>{flagEmoji}</span>
+            <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>{flagEmoji}</span>
         ) : (
             <FallbackBadge label={displayName} />
         )}

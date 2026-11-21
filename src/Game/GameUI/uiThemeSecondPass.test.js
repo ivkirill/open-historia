@@ -51,7 +51,10 @@ test("Theme accents stop at HUD chrome; canonical map, warnings and original pal
   assert.match(advisorDock, /data-oh-theme-hud=""/);
   assert.match(countryDock, /background: active[\s\S]*?"var\(--oh-ui-glass-active,/);
   assert.match(countryDock, /borderColor: active \? "var\(--oh-ui-glass-active-line,/);
-  assert.match(countryDock, /var\(--oh-ui-glass-pill,/);
+  // The flag is a button of the right-hand tray (main.jsx RightDock): the tray takes
+  // the theme's glass, the button the theme's chip, as the dock's launchers do.
+  assert.match(advisorDock, /data-oh-right-dock=""[\s\S]*?backgroundColor: "var\(--oh-ui-glass-pill,/);
+  assert.match(countryDock, /var\(--oh-ui-glass-chip,/);
   assert.match(countryDock, /data-oh-theme-hud=""/);
   assert.match(mapMode, /background: !isDiplo \? "var\(--oh-ui-glass-active,/);
   assert.match(mapMode, /background: isDiplo \? "var\(--oh-ui-glass-active,/);

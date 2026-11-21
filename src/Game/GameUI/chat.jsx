@@ -28,6 +28,7 @@ import { Actions } from "./actions";
 import { Social } from "./social.jsx";
 import { DOCK_BOTTOM_REM, DOCK_BUTTON_REM, DOCK_GAP_REM, DOCK_HEIGHT_REM, DOCK_ICON_PX, DOCK_LEFT_REM, DOCK_PAD_REM, useDockGeometry } from "./hudDock.js";
 import { HudPanel, PanelCloseButton, PanelTabs } from "./hudPanel.jsx";
+import { DockBadge } from "./dockBadge.jsx";
 import { documentsReadableBy, isDocumentExchange } from "../../runtime/reportDelivery.js";
 import { Presence } from "./presence.jsx";
 import StorageProblemNotice from "./storageProblemNotice.jsx";
@@ -2562,9 +2563,6 @@ const NOTIFICATION_SOUND_KEY = "oh:chat-notification-sound-v1";
 const MAX_NOTIFICATION_ITEMS = 40;
 const ACTIVE_REPLY_GRACE_MS = 15000;
 
-// Shared floating-UI spacing. The toast is anchored immediately LEFT of the
-// native top-right date/turn control rather than to a fixed screen corner.
-const FLOATING_UI_EDGE_GAP = "0.75rem";
 
 // Event-driven, with a slow safety interval (see the toolbar watcher).
 const NOTIFICATION_VISIBLE_POLL_MS = 0; // event-driven; external safety runs on tab return
@@ -3686,7 +3684,49 @@ const SpyView = ({ playerCountry, gameDate, countries, loadingCountries, panelOp
     );
 };
 
-const ChatPanel = ({ isOpen, onClose, requestedCountry, requestedDraft = "", onConsumeRequest, requestedChatId = "", onConsumeRequestedChat, isGenerating = false }) => {
+// The sound and desktop switches for incoming diplomatic messages, which lived
+// in the notification list above the dock before its count moved onto the
+// launcher's badge (dockBadge.jsx).
+const notificationSwitchStyle = {
+    alignItems: "center",
+    background: "none",
+    border: "none",
+    borderRadius: "6px",
+    color: "rgba(255,255,255,0.55)",
+    cursor: "pointer",
+    display: "flex",
+    fontFamily: "sans-serif",
+    fontSize: "0.72rem",
+    lineHeight: 1,
+    padding: "0.3rem",
+};
+
+const NotificationSwitches = ({ soundEnabled, onToggleSound, desktopPermission, onEnableDesktop }) => (
+    <>
+    <button
+    type="button"
+    className="oh-tap"
+    onClick={onToggleSound}
+    title={soundEnabled ? "Mute diplomacy notification sound" : "Enable diplomacy notification sound"}
+    aria-label={soundEnabled ? "Mute diplomacy notification sound" : "Enable diplomacy notification sound"}
+    style={{ ...notificationSwitchStyle, fontSize: "0.82rem" }}
+    >
+    {soundEnabled ? "🔊" : "🔇"}
+    </button>
+    <button
+    type="button"
+    className="oh-tap-row"
+    onClick={onEnableDesktop}
+    title="Desktop notification permission"
+    disabled={desktopPermission === "unsupported"}
+    style={{ ...notificationSwitchStyle, color: desktopPermission === "granted" ? "#86efac" : notificationSwitchStyle.color, cursor: desktopPermission === "unsupported" ? "default" : "pointer" }}
+    >
+    {desktopPermission === "granted" ? "Desktop ✓" : "Desktop"}
+    </button>
+    </>
+);
+
+const ChatPanel = ({ isOpen, onClose, requestedCountry, requestedDraft = "", onConsumeRequest, requestedChatId = "", onConsumeRequestedChat, isGenerating = false, notificationSwitches = null }) => {
     // "chats" is the diplomacy the player is party to; "spy" is everyone else's.
     const [view, setView] = useState("chats");
     const [institutionFocusRequest, setInstitutionFocusRequest] = useState(null);
@@ -4400,7 +4440,10 @@ const ChatPanel = ({ isOpen, onClose, requestedCountry, requestedDraft = "", onC
                                 <div style={{ marginTop: ".13rem", fontSize: ".56rem", color: "rgba(255,255,255,.32)" }}>Conversations, institutions and statecraft</div>
                             </div>
                         </div>
+                        <div style={{ alignItems: "center", display: "flex", gap: ".15rem" }}>
+                        {notificationSwitches && <NotificationSwitches {...notificationSwitches} />}
                         <PanelCloseButton onClick={onClose} label="Close diplomacy panel" />
+                        </div>
                     </div>
                     {/* The shared tab strip (hudPanel.jsx); on a phone it scrolls
                         sideways as one row rather than wrapping. */}
@@ -4519,12 +4562,12 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const setChatOpen = () => { onToggle(); };
     // Incoming diplomacy notifications: a toast and a chime for a foreign message
-    // that lands while the player is not reading that thread, a 🔔 center that
-    // keeps them until the panel opens, optional desktop notifications.
+    // that lands while the player is not reading that thread, counted on the
+    // launcher's badge until the panel opens, optional desktop notifications.
+    // The sound and the desktop switch are in the Diplomacy panel's header.
     const [pendingChatId, setPendingChatId] = useState("");
     const [notificationItems, setNotificationItems] = useState([]);
     const [toastItems, setToastItems] = useState([]);
-    const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
     const [soundEnabled, setSoundEnabled] = useState(readNotificationSoundEnabled);
     const [desktopPermission, setDesktopPermission] = useState(() =>
         typeof Notification === "undefined" ? "unsupported" : Notification.permission
@@ -4536,14 +4579,6 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
     const notificationSeqRef = useRef(0);
     const isMobile = useIsMobile();
     const isTouch = useTouchPrimary();
-    // On a phone, Back closes the notification list (runtime/backToClose.js).
-    // "Open" is what is on screen: the list is not drawn while the panel or
-    // the main menu is, even if its flag is still set.
-    useBackToClose(
-        notificationCenterOpen && notificationItems.length > 0 && !isOpen && !mainMenuOpen,
-        () => setNotificationCenterOpen(false),
-    );
-
     // "Someone might be typing": the idle poll rolling for a diplomatic note
     // says when it starts and stops (simulationStatus.js), so the badge and the
     // panel's banner (below) change the moment it does. Subscribed whether or
@@ -4625,7 +4660,6 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
             setHasOpened(true);
             // Opening the panel is where the messages get read; the toasts and
             // the center have done their job.
-            setNotificationCenterOpen(false);
             setNotificationItems([]);
             setToastItems([]);
             for (const timer of toastTimersRef.current.values()) clearTimeout(timer);
@@ -4659,7 +4693,6 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
         if (!item.chatId) return;
 
         setNotificationItems((current) => current.filter((entry) => entry.id !== item.id));
-        setNotificationCenterOpen(false);
         setPendingChatId(String(item.chatId));
         if (!isOpen) onToggle();
     };
@@ -4917,7 +4950,6 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
             toastTimersRef.current.clear();
             setToastItems([]);
             setNotificationItems([]);
-            setNotificationCenterOpen(false);
             void check(null, { force: true });
         };
         window.addEventListener("oh:active-game-changed", onActiveGameChanged);
@@ -4986,7 +5018,6 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
                 toastTimersRef.current.clear();
                 setToastItems([]);
                 setNotificationItems([]);
-                setNotificationCenterOpen(false);
                 return true;
             },
             test: () => pushNotification(
@@ -5085,8 +5116,8 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
             >
                 {/* A phone shows the newest toast only. Four stacked covered
                     most of its screen, and caught every tap there, for their
-                    twelve seconds; held sideways it had room for two. The 🔔
-                    keeps every one. */}
+                    twelve seconds; held sideways it had room for two. The
+                    launcher's badge counts every one. */}
                 {!isOpen && (isMobile || isTouch ? toastItems.slice(-1) : toastItems).map((item) => (
                     <div
                         key={item.id}
@@ -5170,157 +5201,6 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
                 ))}
             </div>
 
-            {notificationItems.length > 0 && !isOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        // The V2 command dock now owns the bottom-left edge. Keep the
-                        // notification center immediately above it instead of colliding
-                        // with / disappearing underneath the dock.
-                        // In from a notch and up from the home indicator, as the
-                        // dock under it is (0 elsewhere).
-                        left: `calc(${FLOATING_UI_EDGE_GAP} + ${SAFE_LEFT})`,
-                        bottom: `calc(${DOCK_BOTTOM_REM + DOCK_HEIGHT_REM + 0.05}rem + ${SAFE_BOTTOM})`,
-                        zIndex: 10050,
-                        fontFamily: "sans-serif",
-                    }}
-                >
-                    <Presence open={notificationCenterOpen}>
-                        <div
-                            style={{
-                                position: "absolute",
-                                left: 0,
-                                bottom: "3rem",
-                                // It starts 0.75rem in, so the same 0.75rem is left
-                                // at the right: `100vw - 1rem` put it 0.25rem from
-                                // the edge of a phone.
-                                width: `min(22rem, calc(100vw - 1.5rem - ${SAFE_LEFT} - ${SAFE_RIGHT}))`,
-                                // It opens upward from the bell (the dock's top edge, then 3rem),
-                                // so on a short screen it
-                                // may be the rest of it and no more: `- 7rem` ran it
-                                // 0.55rem off the top whenever the cap bit (a phone
-                                // held sideways, or with its browser bars showing),
-                                // and the top of its header with it.
-                                maxHeight: isMobile || isTouch
-                                    ? `min(27rem, calc(${APP_HEIGHT} - 8rem - ${SAFE_TOP}))`
-                                    : `min(27rem, calc(${APP_HEIGHT} - 7rem))`,
-                                overflowY: "auto",
-                                borderRadius: "16px",
-                                border: "1px solid rgba(230,230,233,0.18)",
-                                background: "rgba(29,29,32,0.69)",
-                                backdropFilter: "blur(28px) saturate(1.38)",
-                                WebkitBackdropFilter: "blur(28px) saturate(1.38)",
-                                boxShadow: "0 18px 50px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08)",
-                                color: "white",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    position: "sticky",
-                                    top: 0,
-                                    zIndex: 1,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.45rem",
-                                    padding: "0.65rem 0.75rem",
-                                    borderBottom: "1px solid rgba(255,255,255,0.08)",
-                                    background: "rgba(27,27,30,0.76)",
-                                    backdropFilter: "blur(18px)",
-                                    WebkitBackdropFilter: "blur(18px)",
-                                }}
-                            >
-                                <strong style={{ flex: 1, fontSize: "0.78rem" }}>
-                                    Diplomatic messages ({notificationItems.length})
-                                </strong>
-                                <button
-                                    className="oh-tap"
-                                    onClick={toggleSound}
-                                    title={soundEnabled ? "Mute diplomacy notification sound" : "Enable diplomacy notification sound"}
-                                    aria-label={soundEnabled ? "Mute diplomacy notification sound" : "Enable diplomacy notification sound"}
-                                    style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.72)", cursor: "pointer", fontSize: "0.82rem" }}
-                                >
-                                    {soundEnabled ? "🔊" : "🔇"}
-                                </button>
-                                <button
-                                    className="oh-tap-row"
-                                    onClick={enableDesktop}
-                                    title="Desktop notification permission"
-                                    style={{
-                                        border: "none",
-                                        background: "transparent",
-                                        color: desktopPermission === "granted" ? "#86efac" : "rgba(255,255,255,0.55)",
-                                        cursor: desktopPermission === "unsupported" ? "default" : "pointer",
-                                        fontSize: "0.68rem",
-                                    }}
-                                >
-                                    {desktopPermission === "granted" ? "Desktop ✓" : "Desktop"}
-                                </button>
-                                <button
-                                    className="oh-tap-row"
-                                    onClick={() => {
-                                        setNotificationItems([]);
-                                        setNotificationCenterOpen(false);
-                                    }}
-                                    style={{ border: "none", background: "transparent", color: "#93c5fd", cursor: "pointer", fontSize: "0.68rem" }}
-                                >
-                                    Clear
-                                </button>
-                            </div>
-
-                            {[...notificationItems].reverse().map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => openNotificationChat(item)}
-                                    disabled={!item.chatId}
-                                    style={{
-                                        width: "100%",
-                                        border: "none",
-                                        borderBottom: "1px solid rgba(255,255,255,0.07)",
-                                        background: "transparent",
-                                        color: "white",
-                                        padding: "0.7rem 0.8rem",
-                                        textAlign: "left",
-                                        cursor: item.chatId ? "pointer" : "default",
-                                        fontFamily: "sans-serif",
-                                    }}
-                                >
-                                    <div style={{ fontSize: "0.76rem", fontWeight: 750 }}>{item.sender}</div>
-                                    <div style={{ marginTop: "0.2rem", fontSize: "0.7rem", lineHeight: 1.35, color: "rgba(255,255,255,0.62)" }}>
-                                        {item.preview}
-                                    </div>
-                                    <div style={{ marginTop: "0.25rem", fontSize: "0.62rem", color: "rgba(255,255,255,0.32)" }}>
-                                        {item.gameDate ? formatChatDateLabel(item.gameDate) : new Date(item.at).toLocaleTimeString()}
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </Presence>
-
-                    <button
-                        className="oh-tap"
-                        onClick={() => setNotificationCenterOpen((open) => !open)}
-                        title="Diplomatic notifications"
-                        style={{
-                            minWidth: "2.8rem",
-                            height: "2.5rem",
-                            padding: "0 0.65rem",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(230,230,233,0.20)",
-                            background: "rgba(32,32,35,0.67)",
-                            backdropFilter: "blur(24px) saturate(1.35)",
-                            WebkitBackdropFilter: "blur(24px) saturate(1.35)",
-                            color: "white",
-                            boxShadow: "0 8px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)",
-                            cursor: "pointer",
-                            fontFamily: "sans-serif",
-                            fontWeight: 800,
-                            fontSize: "0.72rem",
-                        }}
-                    >
-                        🔔 {notificationItems.length > 99 ? "99+" : notificationItems.length}
-                    </button>
-                </div>
-            )}
             </>,
             document.body,
         )
@@ -5330,7 +5210,7 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
         return (
             <>
             {notificationPortal}
-            {hasOpened && <ChatPanel isOpen={isOpen} onClose={onToggle} requestedCountry={pendingCountry} requestedDraft={pendingDraft} requestedChatId={pendingChatId} onConsumeRequestedChat={() => setPendingChatId("")} onConsumeRequest={() => { setPendingCountry(null); setPendingDraft(""); }} isGenerating={isGenerating} />}
+            {hasOpened && <ChatPanel isOpen={isOpen} onClose={onToggle} requestedCountry={pendingCountry} requestedDraft={pendingDraft} requestedChatId={pendingChatId} onConsumeRequestedChat={() => setPendingChatId("")} onConsumeRequest={() => { setPendingCountry(null); setPendingDraft(""); }} isGenerating={isGenerating} notificationSwitches={{ soundEnabled, onToggleSound: toggleSound, desktopPermission, onEnableDesktop: enableDesktop }} />}
             <button type="button" title={isGenerating ? "Chat — diplomacy in progress" : "Chat"} style={{
                 alignItems: "center",
                 background: isOpen
@@ -5365,10 +5245,8 @@ const Chat = ({ hovered, setHovered, isOpen, onToggle }) => {
                     <span style={{ position: "absolute", top: "-0.55rem", right: "-0.8rem", minWidth: "1.05rem", height: "1.05rem", padding: "0 0.3rem", borderRadius: "999px", background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.35)", color: "white", fontSize: "0.68rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, boxShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
                         <PulsingDots />
                     </span>
-                ) : unseenCount > 0 && (
-                    <span style={{ position: "absolute", top: "-0.55rem", right: "-0.8rem", minWidth: "1.05rem", height: "1.05rem", padding: "0 0.2rem", borderRadius: "999px", background: "#dc2626", border: "1px solid rgba(255,255,255,0.35)", color: "white", fontSize: "0.62rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, boxShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                        {unseenCount > 9 ? "9+" : unseenCount}
-                    </span>
+                ) : (
+                    <DockBadge count={Math.max(unseenCount, notificationItems.length)} />
                 ))}
             </span>
             </button>
